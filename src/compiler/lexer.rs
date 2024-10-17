@@ -1,5 +1,4 @@
-use super::ast::Token;
-use crate::compiler::ast::Number;
+use crate::compiler::token::{Number, Token};
 use std::str::FromStr;
 
 /// Parse an expression and build an AST
@@ -110,8 +109,6 @@ pub fn parse_expression(expr: &str) -> Result<Vec<Token>, String> {
             }
         }
     }
-
-    println!("Tokens: {:?}", tokens);
 
     // Después de recorrer todos los caracteres, verifica si hay un número restante
     if !numero_actual.is_empty() {

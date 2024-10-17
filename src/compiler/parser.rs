@@ -1,6 +1,6 @@
-use super::ast::{Number, Token};
+use super::token::{Number, Token};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum Operator {
     Add,
     Sub,
@@ -11,13 +11,13 @@ enum Operator {
     Pow,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Operand {
     Number(Number),
     Operation(Operation),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Operation {
     operator: Operator,
     left: Box<Operand>,
