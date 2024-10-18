@@ -15,6 +15,7 @@ enum Operator {
 pub enum Operand {
     Number(Number),
     Operation(Operation),
+    End,
 }
 
 #[derive(Debug, PartialEq)]
@@ -37,6 +38,38 @@ impl Operation {
             Operator::Pow => self.left.resolve().pow(self.right.resolve()),
         }
     }
+
+    fn get_operator(&self) -> &Operator {
+        &self.operator
+    }
+
+    fn get_left(&self) -> &Operand {
+        &self.left
+    }
+
+    fn get_right(&self) -> &Operand {
+        &self.right
+    }
+
+    pub fn is_valid(&self) -> bool {
+        let left_valid = match &*self.left {
+            Operand::Number(_) => true,
+            Operand::Operation(op) => op.is_valid(),
+            Operand::End => false,
+        };
+
+        let right_valid = match &*self.right {
+            Operand::Number(_) => true,
+            Operand::Operation(op) => op.is_valid(),
+            Operand::End => false,
+        };
+
+        if *self.left == Operand::End && *self.right == Operand::End {
+            return true;
+        }
+
+        return left_valid && right_valid;
+    }
 }
 
 impl Operand {
@@ -44,7 +77,16 @@ impl Operand {
         match self {
             Operand::Number(n) => Token::Number(n.clone()),
             Operand::Operation(op) => op.resolve(),
+            Operand::End => Token::Number(Number::Int(0)),
         }
+    }
+
+    pub fn is_valid(&self) -> bool {
+        return match self {
+            Operand::Number(_) => true,
+            Operand::Operation(op) => op.is_valid(),
+            Operand::End => true,
+        };
     }
 }
 
@@ -59,6 +101,18 @@ impl<'a> Parser<'a> {
             tokens,
             posición: 0,
         }
+    }
+
+    pub fn get_comments(&self) -> Vec<String> {
+        println!("comments: {:?}", self.tokens);
+        self.tokens
+            .iter()
+            .filter(|t| match t {
+                Token::Comment(_) => true,
+                _ => false,
+            })
+            .map(|x| x.to_string())
+            .collect()
     }
 
     // Función principal para iniciar el parsing
@@ -112,6 +166,9 @@ impl<'a> Parser<'a> {
                     };
                     self.posición += 1; // Consumir el operador
                     let derecho = self.factor();
+                    if derecho == Operand::End {
+                        break;
+                    }
                     nodo = Operand::Operation(Operation {
                         operator: operador,
                         left: Box::new(nodo),
@@ -128,7 +185,8 @@ impl<'a> Parser<'a> {
     // Maneja números y paréntesis
     fn factor(&mut self) -> Operand {
         if self.posición >= self.tokens.len() {
-            panic!("Expresión incompleta");
+            return Operand::End;
+            // panic!("Expresión incompleta");
         }
 
         match &self.tokens[self.posición] {
@@ -155,6 +213,10 @@ impl<'a> Parser<'a> {
                         panic!("Se esperaba ')' en la posición {}", self.posición);
                     }
                 }
+            }
+            Token::Comment(_) | Token::Operand(_) => {
+                self.posición += 1; // Consumir comentario
+                self.factor()
             }
             _ => panic!(
                 "Token inesperado en la posición {}: {:?}",

@@ -10,6 +10,25 @@ pub enum Number {
     Float(f64),
 }
 
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
+pub enum Token {
+    //Basics
+    Identifier(String),
+    Operand(String),
+    Comment(String),
+    EOF,
+
+    // Basic Data Types
+    Number(Number),
+    Char(char),
+    String(String),
+
+    // Puntuation
+    StartParenthesis,
+    EndParenthesis,
+}
+
 impl Number {
     // General Methods for Token
     pub fn to_string(&self) -> String {
@@ -75,18 +94,6 @@ impl Display for Token {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         write!(f, "{}", self.to_string())
     }
-}
-
-#[derive(Debug, Clone)]
-#[allow(dead_code)]
-pub enum Token {
-    Identifier(String),
-    Number(Number),
-    Char(char),
-    Operand(String),
-    StartParenthesis,
-    EndParenthesis,
-    String(String),
 }
 
 impl Add for Number {
@@ -220,6 +227,8 @@ impl Token {
             Token::Operand(op) => op.clone(),
             Token::StartParenthesis => "(".to_string(),
             Token::EndParenthesis => ")".to_string(),
+            Token::Comment(c) => c.clone(),
+            Token::EOF => "EOF".to_string(),
         }
     }
 

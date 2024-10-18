@@ -37,6 +37,10 @@ impl File {
         buf
     }
 
+    pub fn get_path(&self) -> &str {
+        &self.path
+    }
+
     pub fn get_size(&self) -> u64 {
         self.size
     }
