@@ -1,6 +1,7 @@
 use super::token::{Number, Token};
 
 #[derive(Debug, PartialEq)]
+#[allow(dead_code)]
 enum Operator {
     Add,
     Sub,
@@ -9,11 +10,20 @@ enum Operator {
     DivInt,
     Mod,
     Pow,
+    Greater,
+    Less,
+    GreaterEqual,
+    LessEqual,
+    Equal,
+    NotEqual,
 }
 
 #[derive(Debug, PartialEq)]
+#[allow(dead_code)]
 pub enum Operand {
     Number(Number),
+    String(String),
+    Identifier(String),
     Operation(Operation),
     End,
 }
@@ -25,6 +35,7 @@ pub struct Operation {
     right: Box<Operand>,
 }
 
+#[allow(dead_code)]
 impl Operation {
     /// this function resolves the operation
     pub fn resolve(&self) -> Token {
@@ -36,6 +47,12 @@ impl Operation {
             Operator::DivInt => (self.left.resolve() / self.right.resolve()).floor(),
             Operator::Mod => self.left.resolve() % self.right.resolve(),
             Operator::Pow => self.left.resolve().pow(self.right.resolve()),
+            Operator::Greater => Token::Bool(self.left.resolve() > self.right.resolve()),
+            Operator::Less => Token::Bool(self.left.resolve() < self.right.resolve()),
+            Operator::GreaterEqual => Token::Bool(self.left.resolve() >= self.right.resolve()),
+            Operator::LessEqual => Token::Bool(self.left.resolve() <= self.right.resolve()),
+            Operator::Equal => Token::Bool(self.left.resolve() == self.right.resolve()),
+            Operator::NotEqual => Token::Bool(self.left.resolve() != self.right.resolve()),
         }
     }
 
@@ -55,13 +72,13 @@ impl Operation {
         let left_valid = match &*self.left {
             Operand::Number(_) => true,
             Operand::Operation(op) => op.is_valid(),
-            Operand::End => false,
+            _ => false,
         };
 
         let right_valid = match &*self.right {
             Operand::Number(_) => true,
             Operand::Operation(op) => op.is_valid(),
-            Operand::End => false,
+            _ => false,
         };
 
         if *self.left == Operand::End && *self.right == Operand::End {
@@ -78,28 +95,22 @@ impl Operand {
             Operand::Number(n) => Token::Number(n.clone()),
             Operand::Operation(op) => op.resolve(),
             Operand::End => Token::Number(Number::Int(0)),
+            Operand::String(s) => Token::String(s.clone()),
+            Operand::Identifier(i) => Token::Identifier(i.clone()),
         }
-    }
-
-    pub fn is_valid(&self) -> bool {
-        return match self {
-            Operand::Number(_) => true,
-            Operand::Operation(op) => op.is_valid(),
-            Operand::End => true,
-        };
     }
 }
 
 pub struct Parser<'a> {
     tokens: &'a [Token],
-    posición: usize,
+    position: usize,
 }
 
 impl<'a> Parser<'a> {
     pub fn new(tokens: &'a [Token]) -> Self {
         Parser {
             tokens,
-            posición: 0,
+            position: 0,
         }
     }
 
@@ -117,22 +128,77 @@ impl<'a> Parser<'a> {
 
     // Función principal para iniciar el parsing
     pub fn parse(&mut self) -> Operand {
-        self.expresión()
+        // Intentar parsear una asignación primero
+        if let Some(Token::Identifier(_)) = self.tokens.get(self.position) {
+            if self.peek_operator("=") {
+                return self.parse_assignment();
+            }
+        }
+        self.expresion()
+    }
+
+    fn parse_assignment(&mut self) -> Operand {
+        // Obtener el identificador
+        let identifier = if let Token::Identifier(ref name) = self.tokens[self.position] {
+            name.clone()
+        } else {
+            panic!(
+                "Se esperaba un identificador en la posición {}",
+                self.position
+            );
+        };
+        self.position += 1; // Consumir el identificador
+
+        // Obtener el operador de asignación
+        if let Some(v) = self.tokens.get(self.position) {
+            if let Token::Operand(op) = v {
+                if op != "=" {
+                    panic!("Se esperaba '=' en la posición {}", self.position);
+                }
+            } else {
+                panic!("Se esperaba '=' en la posición {}", self.position);
+            }
+        } else {
+            panic!("Se esperaba '=' en la posición {}", self.position);
+        }
+        self.position += 1; // Consumir '='
+
+        // Parsear la expresión derecha de la asignación
+        let expr = self.expresion();
+
+        Operand::Operation(Operation {
+            operator: Operator::Equal,
+            left: Box::new(Operand::Identifier(identifier)),
+            right: Box::new(expr),
+        })
+    }
+
+    fn peek_operator(&self, op: &str) -> bool {
+        if self.position + 1 > self.tokens.len() {
+            return false;
+        }
+        match self.tokens.get(self.position + 0) {
+            Some(v) => match v {
+                Token::Operand(o) if o == op => true,
+                _ => false,
+            },
+            _ => false,
+        }
     }
 
     // Función principal para manejar la expresión (suma y resta)
-    fn expresión(&mut self) -> Operand {
+    fn expresion(&mut self) -> Operand {
         let mut nodo = self.término();
 
-        while self.posición < self.tokens.len() {
-            match &self.tokens[self.posición] {
+        while self.position < self.tokens.len() {
+            match &self.tokens[self.position] {
                 Token::Operand(op) if op == "+" || op == "-" => {
                     let operador = match op.as_str() {
                         "+" => Operator::Add,
                         "-" => Operator::Sub,
                         _ => unreachable!(),
                     };
-                    self.posición += 1; // Consumir el operador
+                    self.position += 1; // Consumir el operador
                     let derecho = self.término();
                     nodo = Operand::Operation(Operation {
                         operator: operador,
@@ -151,8 +217,8 @@ impl<'a> Parser<'a> {
     fn término(&mut self) -> Operand {
         let mut nodo = self.factor();
 
-        while self.posición < self.tokens.len() {
-            match &self.tokens[self.posición] {
+        while self.position < self.tokens.len() {
+            match &self.tokens[self.position] {
                 Token::Operand(op)
                     if op == "*" || op == "/" || op == "**" || op == "//" || op == "%" =>
                 {
@@ -164,7 +230,7 @@ impl<'a> Parser<'a> {
                         "%" => Operator::Mod,
                         _ => unreachable!(),
                     };
-                    self.posición += 1; // Consumir el operador
+                    self.position += 1; // Consumir el operador
                     let derecho = self.factor();
                     if derecho == Operand::End {
                         break;
@@ -184,43 +250,48 @@ impl<'a> Parser<'a> {
 
     // Maneja números y paréntesis
     fn factor(&mut self) -> Operand {
-        if self.posición >= self.tokens.len() {
+        if self.position >= self.tokens.len() {
             return Operand::End;
             // panic!("Expresión incompleta");
         }
 
-        match &self.tokens[self.posición] {
+        match &self.tokens[self.position] {
             Token::Number(n) => {
                 let nodo = Operand::Number(n.clone());
-                self.posición += 1; // Consumir el número
+                self.position += 1; // Consumir el número
+                nodo
+            }
+            Token::String(s) => {
+                let nodo = Operand::String(s.clone());
+                self.position += 1; // Consumir el número
                 nodo
             }
             Token::StartParenthesis => {
-                self.posición += 1; // Consumir '('
+                self.position += 1; // Consumir '('
 
-                let nodo = self.expresión();
+                let nodo = self.expresion();
 
-                if self.posición >= self.tokens.len() {
+                if self.position >= self.tokens.len() {
                     panic!("Falta cerrar el paréntesis");
                 }
 
-                match &self.tokens[self.posición] {
+                match &self.tokens[self.position] {
                     Token::EndParenthesis => {
-                        self.posición += 1; // Consumir ')'
+                        self.position += 1; // Consumir ')'
                         nodo
                     }
                     _ => {
-                        panic!("Se esperaba ')' en la posición {}", self.posición);
+                        panic!("Se esperaba ')' en la position {}", self.position);
                     }
                 }
             }
             Token::Comment(_) | Token::Operand(_) => {
-                self.posición += 1; // Consumir comentario
+                self.position += 1; // Consumir comentario
                 self.factor()
             }
             _ => panic!(
-                "Token inesperado en la posición {}: {:?}",
-                self.posición, self.tokens[self.posición]
+                "Token inesperado en la position {}: {:?}",
+                self.position, self.tokens[self.position]
             ),
         }
     }

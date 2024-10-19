@@ -4,13 +4,13 @@ use std::{
     str::FromStr,
 };
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum Number {
     Int(i64),
     Float(f64),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 #[allow(dead_code)]
 pub enum Token {
     //Basics
@@ -23,6 +23,7 @@ pub enum Token {
     Number(Number),
     Char(char),
     String(String),
+    Bool(bool),
 
     // Puntuation
     StartParenthesis,
@@ -115,6 +116,12 @@ impl Add for Token {
     fn add(self, other: Self) -> Self::Output {
         match (self, other) {
             (Token::Number(a), Token::Number(b)) => Token::Number(a + b),
+            (Token::String(a), Token::String(b)) => Token::String(a + &b),
+            (Token::Char(a), Token::Char(b)) => Token::String(a.to_string() + &b.to_string()),
+            (Token::Char(a), Token::String(b)) => Token::String(a.to_string() + &b),
+            (Token::String(a), Token::Char(b)) => Token::String(a + &b.to_string()),
+            (Token::String(a), Token::Number(b)) => Token::String(a + &b.to_string()),
+            (Token::Number(a), Token::String(b)) => Token::String(a.to_string() + &b),
             _ => panic!("Invalid Operation"),
         }
     }
@@ -139,6 +146,16 @@ impl Sub for Token {
     fn sub(self, other: Self) -> Self::Output {
         match (self, other) {
             (Token::Number(a), Token::Number(b)) => Token::Number(a - b),
+            (Token::String(a), Token::String(b)) => Token::String(a.replace(&b, "")),
+            (Token::String(a), Token::Char(b)) => Token::String(a.replace(b, "")),
+            (Token::String(a), Token::Number(b)) => Token::String(a.replace(&b.to_string(), "")),
+            (Token::Number(a), Token::String(b)) => {
+                if let Ok(num) = Number::from_str(&b) {
+                    return Token::Number(a - num);
+                } else {
+                    panic!("Invalid Operation")
+                }
+            }
             _ => panic!("Invalid Operation"),
         }
     }
@@ -163,6 +180,16 @@ impl Mul for Token {
     fn mul(self, other: Self) -> Self::Output {
         match (self, other) {
             (Token::Number(a), Token::Number(b)) => Token::Number(a * b),
+            (Token::String(a), Token::Number(b)) => {
+                return Token::String(a.repeat(b.value_int() as usize));
+            }
+            (Token::Number(a), Token::String(b)) => {
+                if let Ok(num) = Number::from_str(&b) {
+                    return Token::Number(a * num);
+                } else {
+                    return Token::String(b.repeat(a.value_int() as usize));
+                }
+            }
             _ => panic!("Invalid Operation"),
         }
     }
@@ -187,6 +214,44 @@ impl Div for Token {
     fn div(self, other: Self) -> Self::Output {
         match (self, other) {
             (Token::Number(a), Token::Number(b)) => Token::Number(a / b),
+            (Token::String(a), Token::String(b)) => {
+                return Token::String(a.split(b.as_str()).collect::<String>());
+            }
+            (Token::String(a), Token::Char(b)) => {
+                return Token::String(a.split(b).collect::<String>());
+            }
+            (Token::String(a), Token::Number(b)) => {
+                let mut words: Vec<String> = Vec::new();
+                let mut index = 0;
+                while index < a.len() {
+                    let word = a
+                        .chars()
+                        .skip(index)
+                        .take(b.value_int() as usize)
+                        .collect::<String>();
+                    words.push(word);
+                    index += b.value_int() as usize;
+                }
+                return Token::String(words.join(" "));
+            }
+            (Token::Number(a), Token::String(b)) => {
+                if let Ok(num) = Number::from_str(&b) {
+                    return Token::Number(a / num);
+                } else {
+                    let mut words: Vec<String> = Vec::new();
+                    let mut index = 0;
+                    while index < b.len() {
+                        let word = b
+                            .chars()
+                            .skip(index)
+                            .take(a.value_int() as usize)
+                            .collect::<String>();
+                        words.push(word);
+                        index += a.value_int() as usize;
+                    }
+                    return Token::String(words.join(" "));
+                }
+            }
             _ => panic!("Invalid Operation"),
         }
     }
@@ -211,6 +276,36 @@ impl Rem for Token {
     fn rem(self, other: Self) -> Self::Output {
         match (self, other) {
             (Token::Number(a), Token::Number(b)) => Token::Number(a % b),
+            (Token::String(a), Token::String(b)) => {
+                return Token::String(a.split(b.as_str()).last().unwrap().to_string());
+            }
+            (Token::String(a), Token::Char(b)) => {
+                return Token::String(a.split(b).last().unwrap().to_string());
+            }
+            (Token::String(a), Token::Number(b)) => {
+                let mut index = 0;
+                let value = b.value_int() as usize;
+                while index + value < a.len() {
+                    index += value;
+                }
+                println!("Index: {}", index);
+                return Token::String(a.chars().skip(index).collect::<String>());
+            }
+            (Token::Number(a), Token::String(b)) => {
+                if let Ok(num) = Number::from_str(&b) {
+                    return Token::Number(a / num);
+                } else {
+                    let mut index = 0;
+                    let value = a.value_int() as usize;
+                    println!("Value: {}", b.len());
+                    while index + value < b.len() {
+                        index += value;
+                    }
+                    println!("Index: {}", index);
+
+                    return Token::String(b.chars().skip(index).collect::<String>());
+                }
+            }
             _ => panic!("Invalid Operation"),
         }
     }
@@ -222,13 +317,14 @@ impl Token {
         match self {
             Token::Identifier(name) => name.clone(),
             Token::Number(value) => value.to_string(),
-            Token::Char(c) => c.to_string(),
-            Token::String(s) => s.clone(),
+            Token::Char(c) => format!("'{}'", c.clone()),
+            Token::String(s) => format!("\"{}\"", s.clone()),
             Token::Operand(op) => op.clone(),
             Token::StartParenthesis => "(".to_string(),
             Token::EndParenthesis => ")".to_string(),
             Token::Comment(c) => c.clone(),
             Token::EOF => "EOF".to_string(),
+            Token::Bool(b) => b.to_string(),
         }
     }
 
