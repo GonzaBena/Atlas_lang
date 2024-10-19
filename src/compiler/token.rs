@@ -13,13 +13,32 @@ pub enum Number {
     Float(f64),
 }
 
+#[derive(Debug, PartialEq, Clone, PartialOrd)]
+#[allow(dead_code)]
+pub enum Operator {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    DivInt,
+    Mod,
+    Pow,
+    Asign,
+    Greater,
+    Less,
+    GreaterEqual,
+    LessEqual,
+    Equal,
+    NotEqual,
+}
+
 // MARK: Token
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 #[allow(dead_code)]
 pub enum Token {
     //Basics
     Identifier(String),
-    Operand(String),
+    Operator(Operator),
     Comment(String),
     EOF,
     NewLine,
@@ -33,6 +52,27 @@ pub enum Token {
     // Puntuation
     StartParenthesis,
     EndParenthesis,
+}
+
+impl Operator {
+    pub fn to_string(&self) -> String {
+        match self {
+            Operator::Add => "+".to_string(),
+            Operator::Sub => "-".to_string(),
+            Operator::Mul => "*".to_string(),
+            Operator::Div => "/".to_string(),
+            Operator::DivInt => "//".to_string(),
+            Operator::Mod => "%".to_string(),
+            Operator::Pow => "**".to_string(),
+            Operator::Greater => ">".to_string(),
+            Operator::Less => "<".to_string(),
+            Operator::GreaterEqual => ">=".to_string(),
+            Operator::LessEqual => "<=".to_string(),
+            Operator::Equal => "==".to_string(),
+            Operator::NotEqual => "!=".to_string(),
+            Operator::Asign => "=".to_string(),
+        }
+    }
 }
 
 // MARK: Number impl
@@ -344,7 +384,7 @@ impl Token {
             Token::Number(value) => value.to_string(),
             Token::Char(c) => format!("'{}'", c.clone()),
             Token::String(s) => format!("\"{}\"", s.clone()),
-            Token::Operand(op) => op.clone(),
+            Token::Operator(op) => op.to_string(),
             Token::StartParenthesis => "(".to_string(),
             Token::EndParenthesis => ")".to_string(),
             Token::Comment(c) => c.clone(),

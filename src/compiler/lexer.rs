@@ -7,6 +7,8 @@ use std::{
     str::{Chars, FromStr},
 };
 
+use super::token::Operator;
+
 pub struct Lexer<'a> {
     input: Peekable<Chars<'a>>,
 }
@@ -94,12 +96,12 @@ impl<'a> Lexer<'a> {
                             if let Some(&next_c) = self.input.peek() {
                                 if next_c == '*' {
                                     self.input.next(); // Consumir segundo '*'
-                                    "**".to_string()
+                                    Operator::Pow
                                 } else {
-                                    "*".to_string()
+                                    Operator::Mul
                                 }
                             } else {
-                                "*".to_string()
+                                Operator::Mul
                             }
                         }
                         '/' => {
@@ -107,12 +109,12 @@ impl<'a> Lexer<'a> {
                             if let Some(&next_c) = self.input.peek() {
                                 if next_c == '=' {
                                     self.input.next(); // Consumir segundo '/'
-                                    "//".to_string()
+                                    Operator::DivInt
                                 } else {
-                                    "/".to_string()
+                                    Operator::Div
                                 }
                             } else {
-                                "/".to_string()
+                                Operator::Div
                             }
                         }
                         '=' => {
@@ -120,21 +122,29 @@ impl<'a> Lexer<'a> {
                             if let Some(&next_c) = self.input.peek() {
                                 if next_c == '=' {
                                     self.input.next(); // Consumir segundo '='
-                                    "==".to_string()
+                                    Operator::Equal
                                 } else {
-                                    "=".to_string()
+                                    Operator::Asign
                                 }
                             } else {
-                                "=".to_string()
+                                Operator::Asign
                             }
                         }
-                        '+' | '-' | '%' => {
+                        '+' => {
+                            self.input.next(); // Consumir '+'
+                            Operator::Add
+                        }
+                        '-' => {
+                            self.input.next(); // Consumir '-'
+                            Operator::Sub
+                        }
+                        '%' => {
                             self.input.next(); // Consumir el operador
-                            c.to_string()
+                            Operator::Mod
                         }
                         _ => unreachable!(),
                     };
-                    tokens.push(Token::Operand(operando));
+                    tokens.push(Token::Operator(operando));
                 }
                 // MARK: Parenthesis
                 '(' => {
@@ -179,6 +189,12 @@ impl<'a> Lexer<'a> {
                 }
                 // MARK: NewLine
                 '\n' => {
+                    if !numero_actual.is_empty() {
+                        if let Ok(num) = Number::from_str(numero_actual.as_str()) {
+                            tokens.push(Token::Number(num));
+                        }
+                        numero_actual.clear();
+                    }
                     tokens.push(Token::NewLine);
                     self.input.next(); // Consume '\n'
                 }
