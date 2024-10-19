@@ -4,12 +4,16 @@ use std::{
     str::FromStr,
 };
 
+use crate::error::lexic_errors::LexicError;
+
+// MARK: Number
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum Number {
     Int(i64),
     Float(f64),
 }
 
+// MARK: Token
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 #[allow(dead_code)]
 pub enum Token {
@@ -18,6 +22,7 @@ pub enum Token {
     Operand(String),
     Comment(String),
     EOF,
+    NewLine,
 
     // Basic Data Types
     Number(Number),
@@ -30,6 +35,7 @@ pub enum Token {
     EndParenthesis,
 }
 
+// MARK: Number impl
 impl Number {
     // General Methods for Token
     pub fn to_string(&self) -> String {
@@ -122,7 +128,10 @@ impl Add for Token {
             (Token::String(a), Token::Char(b)) => Token::String(a + &b.to_string()),
             (Token::String(a), Token::Number(b)) => Token::String(a + &b.to_string()),
             (Token::Number(a), Token::String(b)) => Token::String(a.to_string() + &b),
-            _ => panic!("Invalid Operation"),
+            _ => panic!(
+                "{}",
+                LexicError::OperatorError("Invalid Operation".to_string())
+            ),
         }
     }
 }
@@ -153,10 +162,16 @@ impl Sub for Token {
                 if let Ok(num) = Number::from_str(&b) {
                     return Token::Number(a - num);
                 } else {
-                    panic!("Invalid Operation")
+                    panic!(
+                        "{}",
+                        LexicError::OperatorError("Invalid Operation".to_string())
+                    );
                 }
             }
-            _ => panic!("Invalid Operation"),
+            _ => panic!(
+                "{}",
+                LexicError::OperatorError("Invalid Operation".to_string())
+            ),
         }
     }
 }
@@ -190,7 +205,10 @@ impl Mul for Token {
                     return Token::String(b.repeat(a.value_int() as usize));
                 }
             }
-            _ => panic!("Invalid Operation"),
+            _ => panic!(
+                "{}",
+                LexicError::OperatorError("Invalid Operation".to_string())
+            ),
         }
     }
 }
@@ -252,7 +270,10 @@ impl Div for Token {
                     return Token::String(words.join(" "));
                 }
             }
-            _ => panic!("Invalid Operation"),
+            _ => panic!(
+                "{}",
+                LexicError::OperatorError("Invalid Operation".to_string())
+            ),
         }
     }
 }
@@ -306,11 +327,15 @@ impl Rem for Token {
                     return Token::String(b.chars().skip(index).collect::<String>());
                 }
             }
-            _ => panic!("Invalid Operation"),
+            _ => panic!(
+                "{}",
+                LexicError::OperatorError("Invalid Operation".to_string())
+            ),
         }
     }
 }
 
+// MARK: Token impl
 impl Token {
     // General Methods for Token
     pub fn to_string(&self) -> String {
@@ -325,6 +350,7 @@ impl Token {
             Token::Comment(c) => c.clone(),
             Token::EOF => "EOF".to_string(),
             Token::Bool(b) => b.to_string(),
+            Token::NewLine => "\n".to_string(),
         }
     }
 
@@ -334,7 +360,10 @@ impl Token {
                 Number::Int(p) => Token::Number(n.pow(p as i32)),
                 Number::Float(p) => Token::Number(n.powf(p)),
             },
-            _ => panic!("Invalid Operation"),
+            _ => panic!(
+                "{}",
+                LexicError::OperatorError("Invalid Operation".to_string())
+            ),
         }
     }
 
@@ -342,7 +371,10 @@ impl Token {
         match self {
             Token::Number(Number::Int(n)) => Token::Number(Number::Int(*n)),
             Token::Number(Number::Float(n)) => Token::Number(Number::Int(n.floor() as i64)),
-            _ => panic!("Invalid Operation"),
+            _ => panic!(
+                "{}",
+                LexicError::OperatorError("Invalid Operation".to_string())
+            ),
         }
     }
 }

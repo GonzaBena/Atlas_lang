@@ -1,6 +1,6 @@
 use crate::compiler::token::{Number, Token};
 
-use super::lexer::parse_expression;
+use super::lexer::Lexer;
 
 #[derive(Debug)]
 pub struct AST {
@@ -17,7 +17,8 @@ impl AST {
     }
 
     pub fn from_expression(expr: &str) -> Result<Self, String> {
-        let root = parse_expression(expr)?;
+        let mut lex = Lexer::new(expr);
+        let root = lex.tokenizer();
         Ok(AST { root })
     }
 

@@ -1,5 +1,6 @@
-use super::token::{Number, Token};
+use crate::error::{lexic_errors::LexicError, math_errors::MathError};
 
+use super::token::{Number, Token};
 #[derive(Debug, PartialEq)]
 #[allow(dead_code)]
 enum Operator {
@@ -43,7 +44,17 @@ impl Operation {
             Operator::Add => self.left.resolve() + self.right.resolve(),
             Operator::Sub => self.left.resolve() - self.right.resolve(),
             Operator::Mul => self.left.resolve() * self.right.resolve(),
-            Operator::Div => self.left.resolve() / self.right.resolve(),
+            Operator::Div => {
+                if self.right.resolve() == Token::Number(Number::Int(0)) {
+                    panic!(
+                        "{}",
+                        MathError::ZeroDivision(
+                            "Division by zero isn't mathematically possible".to_string()
+                        )
+                    );
+                }
+                self.left.resolve() / self.right.resolve()
+            }
             Operator::DivInt => (self.left.resolve() / self.right.resolve()).floor(),
             Operator::Mod => self.left.resolve() % self.right.resolve(),
             Operator::Pow => self.left.resolve().pow(self.right.resolve()),
@@ -129,12 +140,32 @@ impl<'a> Parser<'a> {
     // Función principal para iniciar el parsing
     pub fn parse(&mut self) -> Operand {
         // Intentar parsear una asignación primero
-        if let Some(Token::Identifier(_)) = self.tokens.get(self.position) {
+        if let Some(t) = self.tokens.get(self.position) {
+            match t {
+                Token::Identifier(_) => {
+                    if self.peek_operator("=") {
+                        return self.parse_assignment();
+                    }
+                }
+                _ => {}
+            }
             if self.peek_operator("=") {
                 return self.parse_assignment();
             }
         }
-        self.expresion()
+        let result = self.expresion();
+        if result != Operand::End {
+            return result;
+        } else {
+            panic!(
+                "{}",
+                LexicError::SyntaxError(format!(
+                    "Unexpected token in position {}: {}",
+                    self.position,
+                    self.tokens[self.position - 1]
+                ))
+            );
+        }
     }
 
     fn parse_assignment(&mut self) -> Operand {
@@ -153,13 +184,28 @@ impl<'a> Parser<'a> {
         if let Some(v) = self.tokens.get(self.position) {
             if let Token::Operand(op) = v {
                 if op != "=" {
-                    panic!("Se esperaba '=' en la posición {}", self.position);
+                    panic!(
+                        "{}",
+                        LexicError::SyntaxError(format!(
+                            "waiting for '=' in position {}",
+                            self.position
+                        ))
+                    );
                 }
             } else {
-                panic!("Se esperaba '=' en la posición {}", self.position);
+                panic!(
+                    "{}",
+                    LexicError::SyntaxError(format!(
+                        "waiting for '=' in position {}",
+                        self.position
+                    ))
+                );
             }
         } else {
-            panic!("Se esperaba '=' en la posición {}", self.position);
+            panic!(
+                "{}",
+                LexicError::SyntaxError(format!("waiting for '=' in position {}", self.position))
+            );
         }
         self.position += 1; // Consumir '='
 
@@ -177,9 +223,12 @@ impl<'a> Parser<'a> {
         if self.position + 1 > self.tokens.len() {
             return false;
         }
-        match self.tokens.get(self.position + 0) {
+        match self.tokens.get(self.position + 1) {
             Some(v) => match v {
-                Token::Operand(o) if o == op => true,
+                Token::Operand(o) if o == op => {
+                    println!("peek_operator: {:?}", o);
+                    true
+                }
                 _ => false,
             },
             _ => false,
@@ -272,7 +321,10 @@ impl<'a> Parser<'a> {
                 let nodo = self.expresion();
 
                 if self.position >= self.tokens.len() {
-                    panic!("Falta cerrar el paréntesis");
+                    panic!(
+                        "{}",
+                        LexicError::SyntaxError(format!("'(' left in position {}", self.position))
+                    );
                 }
 
                 match &self.tokens[self.position] {
@@ -281,17 +333,26 @@ impl<'a> Parser<'a> {
                         nodo
                     }
                     _ => {
-                        panic!("Se esperaba ')' en la position {}", self.position);
+                        panic!(
+                            "{}",
+                            LexicError::SyntaxError(format!(
+                                "')' left in position {}",
+                                self.position
+                            ))
+                        );
                     }
                 }
             }
-            Token::Comment(_) | Token::Operand(_) => {
+            Token::Comment(_) | Token::Operand(_) | Token::NewLine | Token::EOF => {
                 self.position += 1; // Consumir comentario
                 self.factor()
             }
             _ => panic!(
-                "Token inesperado en la position {}: {:?}",
-                self.position, self.tokens[self.position]
+                "{}",
+                LexicError::SyntaxError(format!(
+                    "Unexpected token in position {}: {}",
+                    self.position, self.tokens[self.position]
+                ))
             ),
         }
     }
