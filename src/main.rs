@@ -25,7 +25,7 @@ fn main() {
 
     let mut parser = Pars::new(&tokens);
     let result = parser.parse();
-    let eq_result = result.resolve();
+    // let eq_result = result.resolve();
     println!("Resultado: {:?}\n", result);
 
     // for line in content.lines() {
