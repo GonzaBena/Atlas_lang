@@ -20,12 +20,12 @@ fn main() {
     // println!("Contenido: {}", content);
     let mut lexer = Lexer::new(&content);
     let tokens = lexer.tokenizer();
-    println!("Tokens: {:#?}", tokens);
+    println!("Tokens: {:?}", tokens);
 
     let mut parser = Pars::new(&tokens);
     let result = parser.parse();
     for r in result.statements {
         println!("Resultado: {}", r.resolve());
     }
-    println!("Tabla de identificadores: {:?}", result.identifier_table);
+    println!("Tabla de identificadores: {:#?}", result.identifier_table);
 }

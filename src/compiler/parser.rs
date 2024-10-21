@@ -5,7 +5,7 @@ use super::{
     token::{Number, Operator, Token},
 };
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, PartialOrd)]
 #[allow(dead_code)]
 pub enum Operand {
     Number(Number),
@@ -16,7 +16,7 @@ pub enum Operand {
     End,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, PartialOrd)]
 pub struct Operation {
     operator: Operator,
     left: Box<Operand>,
@@ -24,6 +24,7 @@ pub struct Operation {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+
 pub struct Program {
     pub statements: Vec<Operand>,
     pub identifier_table: IdentifierTable,
@@ -165,14 +166,9 @@ impl<'a> Parser<'a> {
         let mut identifier_table = IdentifierTable::new();
 
         let lines: Vec<&[Token]> = self.tokens.split(|x| x == &Token::NewLine).collect();
-        // for line in lines {
-        //     println!("Line: {:?}", line);
-        // }
         let mut results = Vec::new();
 
         for line in lines {
-            println!("Line: {:?}", line);
-
             // Crear un nuevo parser para cada línea
             let mut line_parser = Parser {
                 tokens: line,
@@ -186,7 +182,6 @@ impl<'a> Parser<'a> {
                     Token::Identifier(_) => {
                         if line_parser.peek_operator(&Operator::Asign) {
                             let result = line_parser.parse_assignment(&identifier_table);
-                            println!("Assignment: {:?}", result);
                             match result.clone() {
                                 Operand::Identifier(i, v) => {
                                     identifier_table.insert(i, (*v).to_token());
@@ -194,7 +189,7 @@ impl<'a> Parser<'a> {
                                 _ => {}
                             }
                             // IdentifierTable::insert(result, result.get_right());
-                            results.push(result);
+                            // results.push(result);
                             continue;
                         }
                     }
@@ -232,8 +227,7 @@ impl<'a> Parser<'a> {
             );
         };
         self.position += 1; // Consumir el identificador
-        println!("Identifier: {:?}", identifier);
-        // Obtener el operador de asignación
+                            // Obtener el operador de asignación
         if let Some(v) = self.tokens.get(self.position) {
             if let Token::Operator(op) = v {
                 if *op != Operator::Asign {
@@ -264,7 +258,6 @@ impl<'a> Parser<'a> {
 
         // Parsear la expresión derecha de la asignación
         let expr = self.expresion(&table);
-        println!("Expr: {:?}", expr.resolve());
 
         Operand::Identifier(identifier, Box::new(expr))
     }

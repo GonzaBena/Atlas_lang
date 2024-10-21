@@ -89,6 +89,17 @@ impl<'a> Lexer<'a> {
                         numero_actual.clear();
                     }
 
+                    // verify if the operator is part of a number
+                    if c == '-' {
+                        if let Some(&next_c) = self.input.peek() {
+                            if next_c.is_numeric() {
+                                numero_actual.push(c);
+                                self.input.next(); // Consume digit
+                                continue;
+                            }
+                        }
+                    }
+
                     // Manejar operadores de uno y dos caracteres
                     let operando = match c {
                         '*' => {

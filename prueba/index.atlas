@@ -1,3 +1,3 @@
-hola=3 / 10
-4+hola
-5*4
+hola="mundo"
+"hola "+hola
+3 - -4
