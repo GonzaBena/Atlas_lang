@@ -35,11 +35,11 @@ pub enum Operator {
 // MARK: Token
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 #[allow(dead_code)]
-pub enum Token {
+pub enum Token<'a> {
     //Basics
     Identifier(String),
     Operator(Operator),
-    Comment(String),
+    Comment(&'a str),
     EOF,
     NewLine,
 
@@ -47,6 +47,7 @@ pub enum Token {
     Number(Number),
     Char(char),
     String(String),
+    Str(&'a str),
     Bool(bool),
 
     // Puntuation
@@ -100,6 +101,13 @@ impl Number {
         };
     }
 
+    pub fn floor(&self) -> Number {
+        return match self {
+            Number::Int(n) => Number::Int(*n),
+            Number::Float(n) => Number::Int(n.floor() as i64),
+        };
+    }
+
     pub fn value_int(&self) -> i64 {
         match self {
             Number::Int(i) => *i,
@@ -137,7 +145,7 @@ impl FromStr for Number {
     }
 }
 
-impl Display for Token {
+impl<'a> Display for Token<'a> {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         write!(f, "{}", self.to_string())
     }
@@ -156,8 +164,8 @@ impl Add for Number {
     }
 }
 
-impl Add for Token {
-    type Output = Token;
+impl<'a> Add for Token<'a> {
+    type Output = Token<'a>;
 
     fn add(self, other: Self) -> Self::Output {
         match (self, other) {
@@ -189,8 +197,8 @@ impl Sub for Number {
     }
 }
 
-impl Sub for Token {
-    type Output = Token;
+impl<'a> Sub for Token<'a> {
+    type Output = Token<'a>;
 
     fn sub(self, other: Self) -> Self::Output {
         match (self, other) {
@@ -229,8 +237,8 @@ impl Mul for Number {
     }
 }
 
-impl Mul for Token {
-    type Output = Token;
+impl<'a> Mul for Token<'a> {
+    type Output = Token<'a>;
 
     fn mul(self, other: Self) -> Self::Output {
         match (self, other) {
@@ -266,11 +274,11 @@ impl Div for Number {
     }
 }
 
-impl Div for Token {
-    type Output = Token;
+impl<'a> Div for Token<'a> {
+    type Output = Token<'a>;
 
     fn div(self, other: Self) -> Self::Output {
-        match (self, other) {
+        match (self.clone(), other) {
             (Token::Number(a), Token::Number(b)) => Token::Number(a / b),
             (Token::String(a), Token::String(b)) => {
                 return Token::String(a.split(b.as_str()).collect::<String>());
@@ -311,8 +319,9 @@ impl Div for Token {
                 }
             }
             _ => panic!(
-                "{}",
-                LexicError::OperatorError("Invalid Operation".to_string())
+                "{} {:?}",
+                LexicError::OperatorError("Invalid Operation ".to_string()),
+                self.clone()
             ),
         }
     }
@@ -331,8 +340,8 @@ impl Rem for Number {
     }
 }
 
-impl Rem for Token {
-    type Output = Token;
+impl<'a> Rem for Token<'a> {
+    type Output = Token<'a>;
 
     fn rem(self, other: Self) -> Self::Output {
         match (self, other) {
@@ -376,25 +385,31 @@ impl Rem for Token {
 }
 
 // MARK: Token impl
-impl Token {
+impl<'a> Token<'a> {
     // General Methods for Token
     pub fn to_string(&self) -> String {
         match self {
-            Token::Identifier(name) => name.clone(),
+            //Basics
+            Token::Identifier(name) => name.to_string(),
+            Token::Operator(op) => op.to_string(),
+            Token::Comment(c) => c.to_string(),
+            Token::EOF => "EOF".to_string(),
+            Token::NewLine => "\n".to_string(),
+
+            // Basic Data Types
             Token::Number(value) => value.to_string(),
             Token::Char(c) => format!("'{}'", c.clone()),
             Token::String(s) => format!("\"{}\"", s.clone()),
-            Token::Operator(op) => op.to_string(),
+            Token::Str(s) => s.to_string(),
+            Token::Bool(b) => b.to_string(),
+
+            // Puntuation
             Token::StartParenthesis => "(".to_string(),
             Token::EndParenthesis => ")".to_string(),
-            Token::Comment(c) => c.clone(),
-            Token::EOF => "EOF".to_string(),
-            Token::Bool(b) => b.to_string(),
-            Token::NewLine => "\n".to_string(),
         }
     }
 
-    pub fn pow(&self, power: Token) -> Token {
+    pub fn pow(&self, power: Token<'a>) -> Token<'a> {
         match (self, power) {
             (Token::Number(n), Token::Number(p)) => match p {
                 Number::Int(p) => Token::Number(n.pow(p as i32)),
@@ -407,7 +422,7 @@ impl Token {
         }
     }
 
-    pub fn floor(&self) -> Token {
+    pub fn floor(&self) -> Token<'a> {
         match self {
             Token::Number(Number::Int(n)) => Token::Number(Number::Int(*n)),
             Token::Number(Number::Float(n)) => Token::Number(Number::Int(n.floor() as i64)),

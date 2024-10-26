@@ -1,6 +1,7 @@
 mod cli;
 mod compiler;
 mod error;
+mod std;
 mod utils;
 
 use clap::Parser;
@@ -19,13 +20,19 @@ fn main() {
     let content = file.get_content();
     // println!("Contenido: {}", content);
     let mut lexer = Lexer::new(&content);
-    let tokens = lexer.tokenizer();
-    println!("Tokens: {:?}", tokens);
+    let tokens = lexer.tokenizer().unwrap();
+    println!("Tokens: {:#?}", tokens);
 
     let mut parser = Pars::new(&tokens);
+    println!("Parser: {:#?}", parser);
     let result = parser.parse();
-    for r in result.statements {
-        println!("Resultado: {}", r.resolve());
+    match result {
+        Ok(r) => {
+            for re in r.statements {
+                println!("Resultado: {}", re.resolve(&r.identifier_table).unwrap());
+            }
+            println!("Tabla de identificadores: {:?}", r.identifier_table);
+        }
+        Err(e) => println!("Error: {:#?}", e),
     }
-    println!("Tabla de identificadores: {:#?}", result.identifier_table);
 }

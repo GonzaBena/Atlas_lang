@@ -20,239 +20,235 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn tokenizer(&mut self) -> Vec<Token> {
+    pub fn tokenizer(&mut self) -> Result<Vec<Token<'a>>, LexicError> {
         // cut until the first '#'
-        let mut tokens: Vec<Token> = Vec::new();
-        let mut numero_actual = String::new();
+        let mut tokens: Vec<Token<'a>> = Vec::new();
 
         while let Some(&c) = self.input.peek() {
             match c {
                 // MARK: Identifiers
                 'a'..='z' | 'A'..='Z' | '_' => {
-                    // Reconocer Identificadores
-                    numero_actual.clear();
-                    while let Some(&c_inner) = self.input.peek() {
-                        if c_inner.is_alphanumeric() || c_inner == '_' {
-                            numero_actual.push(c_inner);
-                            self.input.next();
-                        } else {
-                            break;
-                        }
-                    }
-                    tokens.push(Token::Identifier(numero_actual.clone()));
+                    let identifier = self.consume_identifier();
+                    tokens.push(Token::Identifier(identifier));
                 }
                 // MARK: Strings
                 '\'' | '"' => {
-                    // Cadena de texto
-                    let mut string = String::new();
-                    let quote = c;
-                    self.input.next(); // Consumir la comilla inicial
-                    while let Some(&c) = self.input.peek() {
-                        if c == quote {
-                            self.input.next(); // Consumir la comilla final
-                            break;
-                        } else {
-                            string.push(c);
-                            self.input.next(); // Consumir el carácter
-                        }
-                    }
+                    let string = self.consume_string(c)?;
                     tokens.push(Token::String(string));
                 }
                 // MARK: Comments
                 '#' => {
-                    // Comentario
-                    let mut comment = String::new();
-                    self.input.next(); // Consumir '#'
-                    while let Some(&c) = self.input.peek() {
-                        if c == '\n' {
-                            break;
-                        } else {
-                            comment.push(c);
-                            self.input.next(); // Consumir el carácter
-                        }
-                    }
+                    let comment = self.consume_comment();
+                    let comment: &'a str = Box::leak(comment.into_boxed_str());
                     tokens.push(Token::Comment(comment));
                 }
                 // MARK: Numbers
-                '0'..='9' | '.' | ',' => {
-                    // Acummulate the number
-                    numero_actual.push(c);
-                    self.input.next(); // Consume digit
+                '0'..='9' | '.' => {
+                    let number = self.consume_number()?;
+                    tokens.push(Token::Number(number));
                 }
                 // MARK: Operators
                 '+' | '-' | '*' | '/' | '%' | '=' => {
-                    // If there is a number accumulated, add it as a token
-                    if !numero_actual.is_empty() {
-                        if let Ok(num) = Number::from_str(&numero_actual) {
-                            tokens.push(Token::Number(num));
-                        }
-                        numero_actual.clear();
-                    }
-
-                    // verify if the operator is part of a number
-                    if c == '-' {
-                        if let Some(&next_c) = self.input.peek() {
-                            if next_c.is_numeric() {
-                                numero_actual.push(c);
-                                self.input.next(); // Consume digit
-                                continue;
-                            }
-                        }
-                    }
-
-                    // Manejar operadores de uno y dos caracteres
-                    let operando = match c {
-                        '*' => {
-                            self.input.next(); // Consumir '*'
-                            if let Some(&next_c) = self.input.peek() {
-                                if next_c == '*' {
-                                    self.input.next(); // Consumir segundo '*'
-                                    Operator::Pow
-                                } else {
-                                    Operator::Mul
-                                }
-                            } else {
-                                Operator::Mul
-                            }
-                        }
-                        '/' => {
-                            self.input.next(); // Consumir '/'
-                            if let Some(&next_c) = self.input.peek() {
-                                if next_c == '=' {
-                                    self.input.next(); // Consumir segundo '/'
-                                    Operator::DivInt
-                                } else {
-                                    Operator::Div
-                                }
-                            } else {
-                                Operator::Div
-                            }
-                        }
-                        '=' => {
-                            self.input.next(); // Consumir '='
-                            if let Some(&next_c) = self.input.peek() {
-                                if next_c == '=' {
-                                    self.input.next(); // Consumir segundo '='
-                                    Operator::Equal
-                                } else {
-                                    Operator::Asign
-                                }
-                            } else {
-                                Operator::Asign
-                            }
-                        }
-                        '+' => {
-                            self.input.next(); // Consumir '+'
-                            Operator::Add
-                        }
-                        '-' => {
-                            self.input.next(); // Consumir '-'
-                            Operator::Sub
-                        }
-                        '%' => {
-                            self.input.next(); // Consumir el operador
-                            Operator::Mod
-                        }
-                        _ => unreachable!(),
-                    };
-                    tokens.push(Token::Operator(operando));
+                    // Handle operator parsing
+                    let operator = self.consume_operator(c)?;
+                    tokens.push(Token::Operator(operator));
                 }
                 // MARK: Parenthesis
                 '(' => {
-                    // Si hay un número acumulado, agregarlo como token
-                    if !numero_actual.is_empty() {
-                        if let Ok(num) = Number::from_str(numero_actual.as_str()) {
-                            tokens.push(Token::Number(num));
-                        } else {
-                            panic!(
-                                "{}",
-                                LexicError::NumberError(
-                                    "Invalid number, the numbers need to be from 0 to 9"
-                                        .to_string()
-                                )
-                            );
-                        }
-                        numero_actual.clear();
-                    }
-
+                    self.input.next(); // Consume '('
                     tokens.push(Token::StartParenthesis);
-                    self.input.next(); // Consumir '('
                 }
                 ')' => {
-                    // if there is a number accumulated, add it as a token
-                    if !numero_actual.is_empty() {
-                        if let Ok(num) = Number::from_str(numero_actual.as_str()) {
-                            tokens.push(Token::Number(num));
-                        } else {
-                            panic!(
-                                "{}",
-                                LexicError::NumberError(
-                                    "Invalid number, the numbers need to be from 0 to 9"
-                                        .to_string()
-                                )
-                            );
-                        }
-                        numero_actual.clear();
-                    }
-
-                    tokens.push(Token::EndParenthesis);
                     self.input.next(); // Consume ')'
+                    tokens.push(Token::EndParenthesis);
                 }
                 // MARK: NewLine
                 '\n' => {
-                    if !numero_actual.is_empty() {
-                        if let Ok(num) = Number::from_str(numero_actual.as_str()) {
-                            tokens.push(Token::Number(num));
-                        }
-                        numero_actual.clear();
-                    }
-                    tokens.push(Token::NewLine);
                     self.input.next(); // Consume '\n'
+                    tokens.push(Token::NewLine);
                 }
-                // MARK: WhiteSpace
+                // MARK: Carriage Return (handle '\r\n')
                 '\r' => {
-                    // manage possible '\r\n' in windows
-                    self.input.next(); // Consum '\r'
+                    self.input.next(); // Consume '\r'
                     if let Some(&'\n') = self.input.peek() {
-                        tokens.push(Token::NewLine);
                         self.input.next(); // Consume '\n'
+                        tokens.push(Token::NewLine);
                     }
                 }
+                // MARK: Whitespace
                 ' ' | '\t' => {
-                    // Ignorar espacios en blanco
-                    if !numero_actual.is_empty() {
-                        if let Ok(num) = Number::from_str(numero_actual.as_str()) {
-                            tokens.push(Token::Number(num));
-                        } else {
-                            panic!(
-                                "{}",
-                                LexicError::NumberError(
-                                    "Invalid number, the numbers need to be from 0 to 9"
-                                        .to_string()
-                                )
-                            );
-                        }
-                        numero_actual.clear();
-                    }
-                    self.input.next(); // Consume espacio
+                    self.input.next(); // Consume space or tab
                 }
+                // MARK: Unexpected Characters
                 _ => {
-                    panic!(
-                        "{}",
-                        LexicError::SyntaxError(format!("Unexpected character: {}", c))
-                    );
+                    return Err(LexicError::SyntaxError(format!(
+                        "Unexpected character: '{}'",
+                        c
+                    )));
                 }
             }
         }
 
         // Después de recorrer todos los caracteres, verifica si hay un número restante
-        if !numero_actual.is_empty() {
-            if let Ok(num) = Number::from_str(numero_actual.as_str()) {
-                tokens.push(Token::Number(num));
+        // if !current_number.is_empty() {
+        //     if let Ok(num) = Number::from_str(current_number.as_str()) {
+        //         tokens.push(Token::Number(num));
+        //     }
+        // }
+        tokens.push(Token::EOF); // Opcional: end of input
+        Ok(tokens)
+    }
+
+    fn consume_identifier(&mut self) -> String {
+        // let start_pos = self.input.clone();
+        let mut identifier = String::new();
+        while let Some(&c_inner) = self.input.peek() {
+            if c_inner.is_alphanumeric() || c_inner == '_' {
+                identifier.push(c_inner);
+                self.input.next();
+            } else {
+                break;
+            }
+        }
+        identifier
+    }
+
+    fn consume_string(&mut self, quote: char) -> Result<String, LexicError> {
+        let mut string = String::new();
+        self.input.next(); // Consume the opening quote
+
+        while let Some(&c) = self.input.peek() {
+            if c == quote {
+                self.input.next(); // Consume the closing quote
+                return Ok(string);
+            } else if c == '\\' {
+                self.input.next(); // Consume '\\'
+                if let Some(&escaped_char) = self.input.peek() {
+                    match escaped_char {
+                        'n' => {
+                            string.push('\n');
+                        }
+                        't' => {
+                            string.push('\t');
+                        }
+                        '\\' => {
+                            string.push('\\');
+                        }
+                        '"' => {
+                            string.push('"');
+                        }
+                        '\'' => {
+                            string.push('\'');
+                        }
+                        _ => {
+                            return Err(LexicError::SyntaxError(format!(
+                                "Invalid escape character: \\{}",
+                                escaped_char
+                            )));
+                        }
+                    }
+                    self.input.next(); // Consume the escaped character
+                } else {
+                    return Err(LexicError::SyntaxError(
+                        "Unterminated escape sequence in string".to_string(),
+                    ));
+                }
+            } else {
+                string.push(c);
+                self.input.next(); // Consume the character
             }
         }
 
-        tokens.push(Token::EOF); // Opcional: end of input
-        tokens
+        Err(LexicError::UnterminatedString)
+    }
+
+    fn consume_comment(&mut self) -> String {
+        let mut comment = String::new();
+        self.input.next(); // Consume '#'
+
+        while let Some(&c) = self.input.peek() {
+            if c == '\n' {
+                break;
+            } else {
+                comment.push(c);
+                self.input.next(); // Consume the character
+            }
+        }
+
+        comment.trim().to_string()
+    }
+
+    fn consume_number(&mut self) -> Result<Number, LexicError> {
+        let mut number_str = String::new();
+        let mut has_decimal = false;
+
+        while let Some(&c) = self.input.peek() {
+            if c.is_digit(10) {
+                number_str.push(c);
+                self.input.next();
+            } else if c == '.' && !has_decimal {
+                has_decimal = true;
+                number_str.push(c);
+                self.input.next();
+            } else {
+                break;
+            }
+        }
+
+        match Number::from_str(&number_str) {
+            Ok(num) => Ok(num),
+            Err(_) => Err(LexicError::NumberError(format!(
+                "Invalid number format: '{}'",
+                number_str
+            ))),
+        }
+    }
+
+    fn consume_operator(&mut self, first_char: char) -> Result<Operator, LexicError> {
+        match first_char {
+            '*' => {
+                self.input.next(); // Consume '*'
+                if let Some(&'*') = self.input.peek() {
+                    self.input.next(); // Consume second '*'
+                    Ok(Operator::Pow)
+                } else {
+                    Ok(Operator::Mul)
+                }
+            }
+            '/' => {
+                self.input.next(); // Consume '/'
+                if let Some(&'/') = self.input.peek() {
+                    self.input.next(); // Consume '/'
+                    Ok(Operator::DivInt)
+                } else {
+                    Ok(Operator::Div)
+                }
+            }
+            '=' => {
+                self.input.next(); // Consume '='
+                if let Some(&'=') = self.input.peek() {
+                    self.input.next(); // Consume '='
+                    Ok(Operator::Equal)
+                } else {
+                    Ok(Operator::Asign)
+                }
+            }
+            '+' => {
+                self.input.next(); // Consume '+'
+                Ok(Operator::Add)
+            }
+            '-' => {
+                self.input.next(); // Consume '-'
+                Ok(Operator::Sub)
+            }
+            '%' => {
+                self.input.next(); // Consume '%'
+                Ok(Operator::Mod)
+            }
+            _ => Err(LexicError::SyntaxError(format!(
+                "Unknown operator: '{}'",
+                first_char
+            ))),
+        }
     }
 }

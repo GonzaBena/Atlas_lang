@@ -16,6 +16,8 @@ pub enum MathError {
     // when the operator is not valid
     InvalidOperator(String),
 
+    InvalidOperation(String),
+
     InvalidNumber(String),
 
     InvalidString(String),
@@ -23,6 +25,8 @@ pub enum MathError {
     InvalidEnd(String),
 
     ZeroDivision(String),
+
+    UndefinedVariable(String),
 }
 
 impl Display for MathError {
@@ -36,6 +40,8 @@ impl Display for MathError {
             MathError::InvalidString(string) => write!(f, "Invalid string: {}", string),
             MathError::InvalidEnd(end) => write!(f, "Invalid end: {}", end),
             MathError::ZeroDivision(division) => write!(f, "Zero division: {}", division),
+            MathError::InvalidOperation(operation) => write!(f, "Invalid operation: {}", operation),
+            MathError::UndefinedVariable(variable) => write!(f, "Undefined variable: {}", variable),
         }
     }
 }

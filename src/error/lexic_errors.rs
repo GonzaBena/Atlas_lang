@@ -10,6 +10,7 @@ pub enum LexicError {
     OperatorError(String),
     SyntaxError(String),
     OperandError(String),
+    UnterminatedString,
 }
 
 impl Display for LexicError {
@@ -21,6 +22,7 @@ impl Display for LexicError {
             LexicError::OperatorError(operator) => write!(f, "OperatorError: {}", operator),
             LexicError::SyntaxError(syntax) => write!(f, "SyntaxError: {}", syntax),
             LexicError::OperandError(operand) => write!(f, "OperandError: {}", operand),
+            LexicError::UnterminatedString => write!(f, "UnterminatedString"),
         }
     }
 }

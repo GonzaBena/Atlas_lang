@@ -1,68 +1,247 @@
-use crate::error::{lexic_errors::LexicError, math_errors::MathError};
+use crate::error::{lexic_errors::LexicError, math_errors::MathError, parse_errors::ParseError};
 
 use super::{
     identifier::IdentifierTable,
     token::{Number, Operator, Token},
 };
 
-#[derive(Debug, PartialEq, Clone, PartialOrd)]
-#[allow(dead_code)]
-pub enum Operand {
+#[derive(Debug, PartialEq, Clone)]
+pub enum Operand<'a> {
     Number(Number),
     String(String),
     Boolean(bool),
-    Identifier(String, Box<Operand>),
-    Operation(Operation),
+    Identifier(&'a str, Option<Box<Operand<'a>>>),
+    Operation(Operation<'a>),
     End,
 }
 
-#[derive(Debug, PartialEq, Clone, PartialOrd)]
-pub struct Operation {
-    operator: Operator,
-    left: Box<Operand>,
-    right: Box<Operand>,
+impl<'a> Operand<'a> {
+    pub fn resolve(&self, table: &IdentifierTable<'a>) -> Result<Token<'a>, MathError> {
+        match self {
+            Operand::Number(n) => Ok(Token::Number(n.clone())),
+            Operand::Operation(op) => op.resolve(table),
+            Operand::String(s) => Ok(Token::String(s.clone())),
+            Operand::End => Ok(Token::Number(Number::Int(0))),
+            Operand::Identifier(name, _operand) => {
+                if let Some(value) = table.get(name) {
+                    Ok(value.clone())
+                } else {
+                    Err(MathError::UndefinedVariable(name.to_string()))
+                }
+            }
+            Operand::Boolean(b) => Ok(Token::Bool(*b)),
+        }
+    }
+
+    #[allow(dead_code)]
+    fn to_token(&self, table: &'a IdentifierTable) -> Result<Token<'a>, MathError> {
+        match self {
+            Operand::Number(n) => Ok(Token::Number(n.clone())),
+            Operand::Operation(op) => op.resolve(table),
+            Operand::End => Ok(Token::EOF),
+            Operand::String(s) => Ok(Token::String(s.clone())),
+            Operand::Identifier(_, v) => {
+                if let Some(value) = v {
+                    value.resolve(table)
+                } else {
+                    Ok(Token::EOF)
+                }
+            }
+            Operand::Boolean(b) => Ok(Token::Bool(*b)),
+        }
+    }
+
+    pub fn from_token(token: Token) -> Operand {
+        match token {
+            Token::Number(n) => Operand::Number(n),
+            Token::String(s) => Operand::String(s),
+            Token::Bool(b) => Operand::Boolean(b),
+            v => Operand::String(v.to_string()),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-
-pub struct Program {
-    pub statements: Vec<Operand>,
-    pub identifier_table: IdentifierTable,
+pub struct Operation<'a> {
+    operator: Operator,
+    left: Box<Operand<'a>>,
+    right: Box<Operand<'a>>,
 }
 
 #[allow(dead_code)]
-impl Operation {
+impl<'a> Operation<'a> {
     /// this function resolves the operation
-    pub fn resolve(&self) -> Token {
+    pub fn resolve(&self, table: &IdentifierTable<'a>) -> Result<Token<'a>, MathError> {
+        let left = self.left.resolve(table)?;
+        let right = self.right.resolve(table)?;
+
         match self.operator {
-            Operator::Add => self.left.resolve() + self.right.resolve(),
-            Operator::Sub => self.left.resolve() - self.right.resolve(),
-            Operator::Mul => self.left.resolve() * self.right.resolve(),
+            Operator::Add => Ok(left + right),
+            Operator::Sub => Ok(left - right),
+            Operator::Mul => Ok(left * right),
             Operator::Div => {
-                if self.right.resolve() == Token::Number(Number::Int(0)) {
-                    panic!(
-                        "{}",
-                        MathError::ZeroDivision(
-                            "Division by zero isn't mathematically possible".to_string()
-                        )
-                    );
+                if right == Token::Number(Number::Int(0)) {
+                    Err(MathError::ZeroDivision(
+                        "Division by zero isn't mathematically possible".to_string(),
+                    ))
+                } else {
+                    Ok(left / right)
                 }
-                self.left.resolve() / self.right.resolve()
             }
-            Operator::DivInt => (self.left.resolve() / self.right.resolve()).floor(),
-            Operator::Mod => self.left.resolve() % self.right.resolve(),
-            Operator::Pow => self.left.resolve().pow(self.right.resolve()),
-            Operator::Greater => Token::Bool(self.left.resolve() > self.right.resolve()),
-            Operator::Less => Token::Bool(self.left.resolve() < self.right.resolve()),
-            Operator::GreaterEqual => Token::Bool(self.left.resolve() >= self.right.resolve()),
-            Operator::LessEqual => Token::Bool(self.left.resolve() <= self.right.resolve()),
-            Operator::Equal => Token::Bool(self.left.resolve() == self.right.resolve()),
-            Operator::NotEqual => Token::Bool(self.left.resolve() != self.right.resolve()),
+            Operator::DivInt => {
+                println!("DivInt: {:?} / {:?}", left, right);
+                if let Token::Number(f) = left {
+                    if let Token::Number(r) = right {
+                        Ok(Token::Number(f / r))
+                    } else {
+                        Err(MathError::InvalidOperation(
+                            "Invalid type for DivInt in the right element".to_string(),
+                        ))
+                    }
+                } else {
+                    // Handle other number types appropriately
+                    Err(MathError::InvalidOperation(
+                        "Invalid type for DivInt".to_string(),
+                    ))
+                }
+            }
+            Operator::Mod => {
+                if let Token::Number(l) = left {
+                    if let Token::Number(r) = right {
+                        Ok(Token::Number(l % r))
+                    } else {
+                        Err(MathError::InvalidOperation(
+                            "Invalid type for Mod in the right element".to_string(),
+                        ))
+                    }
+                } else {
+                    // Handle other number types appropriately
+                    Err(MathError::InvalidOperation(
+                        "Invalid type for Mod in the left element ".to_string(),
+                    ))
+                }
+            }
+            Operator::Pow => {
+                if let Token::Number(l) = left {
+                    if let Token::Number(r) = right {
+                        return match r {
+                            Number::Int(i) => Ok(Token::Number(l.pow(i as i32))),
+                            Number::Float(f) => Ok(Token::Number(l.powf(f))),
+                        };
+                    } else {
+                        Err(MathError::InvalidOperation(
+                            "Invalid type for Pow in the right element".to_string(),
+                        ))
+                    }
+                } else {
+                    // Handle other number types appropriately
+                    Err(MathError::InvalidOperation(
+                        "Invalid type for Pow in the left element".to_string(),
+                    ))
+                }
+            }
+            Operator::Greater => {
+                if let Token::Number(l) = left {
+                    if let Token::Number(r) = right {
+                        Ok(Token::Bool(l > r))
+                    } else {
+                        Err(MathError::InvalidOperation(
+                            "Invalid type for Greater in the right element".to_string(),
+                        ))
+                    }
+                } else {
+                    // Handle other number types appropriately
+                    Err(MathError::InvalidOperation(
+                        "Invalid type for Greater in the left element".to_string(),
+                    ))
+                }
+            }
+            Operator::Less => {
+                if let Token::Number(l) = left {
+                    if let Token::Number(r) = right {
+                        Ok(Token::Bool(l < r))
+                    } else {
+                        Err(MathError::InvalidOperation(
+                            "Invalid type for Less in the right element".to_string(),
+                        ))
+                    }
+                } else {
+                    // Handle other number types appropriately
+                    Err(MathError::InvalidOperation(
+                        "Invalid type for Less in the left element".to_string(),
+                    ))
+                }
+            }
+            Operator::GreaterEqual => {
+                if let Token::Number(l) = left {
+                    if let Token::Number(r) = right {
+                        Ok(Token::Bool(l >= r))
+                    } else {
+                        Err(MathError::InvalidOperation(
+                            "Invalid type for GreaterEqual in the right element".to_string(),
+                        ))
+                    }
+                } else {
+                    // Handle other number types appropriately
+                    Err(MathError::InvalidOperation(
+                        "Invalid type for GreaterEqual in the left element".to_string(),
+                    ))
+                }
+            }
+            Operator::LessEqual => {
+                if let Token::Number(l) = left {
+                    if let Token::Number(r) = right {
+                        Ok(Token::Bool(l <= r))
+                    } else {
+                        Err(MathError::InvalidOperation(
+                            "Invalid type for LessEqual in the right element".to_string(),
+                        ))
+                    }
+                } else {
+                    // Handle other number types appropriately
+                    Err(MathError::InvalidOperation(
+                        "Invalid type for LessEqual in the left element".to_string(),
+                    ))
+                }
+            }
+            Operator::Equal => {
+                if let Token::Number(l) = left {
+                    if let Token::Number(r) = right {
+                        Ok(Token::Bool(l == r))
+                    } else {
+                        Err(MathError::InvalidOperation(
+                            "Invalid type for Equal in the right element".to_string(),
+                        ))
+                    }
+                } else {
+                    // Handle other number types appropriately
+                    Err(MathError::InvalidOperation(
+                        "Invalid type for Equal in the left element".to_string(),
+                    ))
+                }
+            }
+            Operator::NotEqual => {
+                if let Token::Number(l) = left {
+                    if let Token::Number(r) = right {
+                        Ok(Token::Bool(l != r))
+                    } else {
+                        Err(MathError::InvalidOperation(
+                            "Invalid type for NotEqual in the right element".to_string(),
+                        ))
+                    }
+                } else {
+                    // Handle other number types appropriately
+                    Err(MathError::InvalidOperation(
+                        "Invalid type for NotEqual in the left element".to_string(),
+                    ))
+                }
+            }
             Operator::Asign => {
                 // Asignar el valor de la derecha a la variable de la izquierda
                 // let mut variables = VARIABLES.lock().unwrap();
                 // variables.insert(self.left.resolve().to_string(), self.right.resolve());
-                Token::EOF
+                println!("Asignación: {:?}", right);
+                Ok(right)
             }
         }
     }
@@ -100,44 +279,15 @@ impl Operation {
     }
 }
 
-impl Operand {
-    pub fn resolve(&self) -> Token {
-        match self {
-            Operand::Number(n) => Token::Number(n.clone()),
-            Operand::Operation(op) => op.resolve(),
-            Operand::End => Token::Number(Number::Int(0)),
-            Operand::String(s) => Token::String(s.clone()),
-            Operand::Identifier(_, v) => v.to_token(),
-            Operand::Boolean(b) => Token::Bool(*b),
-        }
-    }
-
-    fn to_token(&self) -> Token {
-        match self {
-            Operand::Number(n) => Token::Number(n.clone()),
-            Operand::Operation(op) => op.resolve(),
-            Operand::End => Token::EOF,
-            Operand::String(s) => Token::String(s.clone()),
-            Operand::Identifier(_, v) => match (**v).clone() {
-                Operand::Identifier(i, _) => Token::Identifier(i),
-                _ => v.to_token(),
-            },
-            Operand::Boolean(b) => Token::Bool(*b),
-        }
-    }
-
-    pub fn from_token(token: Token) -> Operand {
-        match token {
-            Token::Number(n) => Operand::Number(n),
-            Token::String(s) => Operand::String(s),
-            Token::Bool(b) => Operand::Boolean(b),
-            v => Operand::String(v.to_string()),
-        }
-    }
+#[derive(Debug)]
+pub struct Program<'a> {
+    pub statements: Vec<Operand<'a>>,
+    pub identifier_table: Box<IdentifierTable<'a>>,
 }
 
+#[derive(Debug)]
 pub struct Parser<'a> {
-    tokens: &'a [Token],
+    tokens: &'a [Token<'a>],
     position: usize,
 }
 
@@ -162,217 +312,205 @@ impl<'a> Parser<'a> {
     }
 
     // Función principal para iniciar el parsing
-    pub fn parse(&mut self) -> Program {
-        let mut identifier_table = IdentifierTable::new();
+    pub fn parse(&mut self) -> Result<Program<'a>, ParseError> {
+        let mut identifier_table: IdentifierTable<'a> = IdentifierTable::new();
 
-        let lines: Vec<&[Token]> = self.tokens.split(|x| x == &Token::NewLine).collect();
         let mut results = Vec::new();
+        let lines: Vec<&[Token<'a>]> = self.tokens.split(|x| *x == Token::NewLine).collect();
 
         for line in lines {
-            // Crear un nuevo parser para cada línea
             let mut line_parser = Parser {
                 tokens: line,
                 position: 0,
-                // Copiar otros campos necesarios del parser original
             };
 
             // Intentar parsear una asignación primero
-            if let Some(t) = line_parser.tokens.get(line_parser.position) {
-                match t {
-                    Token::Identifier(_) => {
-                        if line_parser.peek_operator(&Operator::Asign) {
-                            let result = line_parser.parse_assignment(&identifier_table);
-                            match result.clone() {
-                                Operand::Identifier(i, v) => {
-                                    identifier_table.insert(i, (*v).to_token());
-                                }
-                                _ => {}
-                            }
-                            // IdentifierTable::insert(result, result.get_right());
-                            // results.push(result);
+            if let Some(Token::Identifier(_)) = line_parser.tokens.get(0) {
+                if line_parser.peek_operator(&Operator::Asign) {
+                    let result = line_parser.parse_assignment(&mut identifier_table).unwrap();
+                    if let Operand::Identifier(..) = result.clone() {
+                        if self.peek_operator(&Operator::Asign) {
+                            results.push(result);
                             continue;
+                        } else {
+                            panic!("Error al parsear la línea: {:?}", line);
                         }
                     }
-                    _ => {}
-                }
-                if line_parser.peek_operator(&Operator::Asign) {
-                    let result = line_parser.parse_assignment(&identifier_table);
-                    results.push(result);
                     continue;
                 }
             }
 
-            let result = line_parser.expresion(&mut identifier_table);
-            if result != Operand::End {
-                results.push(result);
-            } else {
-                panic!("Error al parsear la línea: {:?}", line);
-            }
+            let result = line_parser.expresion(&identifier_table).unwrap();
+            results.push(result);
         }
 
-        Program {
+        Ok(Program {
             statements: results,
-            identifier_table,
-        }
+            identifier_table: Box::new(identifier_table.clone()),
+        })
     }
 
-    fn parse_assignment(&mut self, table: &IdentifierTable) -> Operand {
-        // Obtener el identificador
-        let identifier = if let Token::Identifier(ref name) = self.tokens[self.position] {
+    fn parse_assignment(
+        &mut self,
+        table: &mut IdentifierTable<'a>,
+    ) -> Result<Operand<'a>, ParseError> {
+        let identifier = if let Token::Identifier(name) = &self.tokens[self.position] {
             name.clone()
         } else {
-            panic!(
-                "Se esperaba un identificador en la posición {}",
+            return Err(ParseError::SyntaxError(format!(
+                "Expected identifier at position {}",
                 self.position
-            );
+            )));
         };
-        self.position += 1; // Consumir el identificador
-                            // Obtener el operador de asignación
-        if let Some(v) = self.tokens.get(self.position) {
-            if let Token::Operator(op) = v {
-                if *op != Operator::Asign {
-                    panic!(
-                        "{}",
-                        LexicError::SyntaxError(format!(
-                            "waiting for '=' in position {}",
-                            self.position
-                        ))
-                    );
-                }
-            } else {
-                panic!(
-                    "{}",
-                    LexicError::SyntaxError(format!(
-                        "waiting for '=' in position {}",
-                        self.position
-                    ))
-                );
-            }
-        } else {
-            panic!(
-                "{}",
-                LexicError::SyntaxError(format!("waiting for '=' in position {}", self.position))
-            );
+        self.position += 1; // Consume the identifier
+
+        // Expect assignment operator '='
+        if !self.consume_operator(&Operator::Asign)? {
+            return Err(ParseError::SyntaxError(format!(
+                "Expected '=' after identifier at position {}",
+                self.position
+            )));
         }
-        self.position += 1; // Consumir '='
 
-        // Parsear la expresión derecha de la asignación
-        let expr = self.expresion(&table);
+        // Parse the right-hand expression
+        let expr = self.expresion(table)?;
 
-        Operand::Identifier(identifier, Box::new(expr))
+        // Resolve the expression and insert into the identifier table
+        let value = expr.resolve(table).unwrap();
+        table.insert(identifier.clone(), value.clone());
+
+        Ok(Operand::Identifier(
+            Box::leak(identifier.into_boxed_str()),
+            Some(Box::new(expr)),
+        ))
     }
 
     fn peek_operator(&self, op: &Operator) -> bool {
-        if self.position + 1 > self.tokens.len() {
-            return false;
+        self.tokens.get(self.position + 1).map_or(
+            false,
+            |token| matches!(token, Token::Operator(current_op) if current_op == op),
+        )
+    }
+
+    /// Consumes the specified operator if it matches the current token.
+    fn consume_operator(&mut self, op: &Operator) -> Result<bool, ParseError> {
+        if let Some(Token::Operator(current_op)) = self.tokens.get(self.position) {
+            if current_op == op {
+                self.position += 1; // Consume the operator
+                return Ok(true);
+            }
         }
-        match self.tokens.get(self.position + 1) {
-            Some(v) => match v {
-                Token::Operator(o) if o == op => true,
-                _ => false,
-            },
-            _ => false,
-        }
+        Ok(false)
     }
 
     // Función principal para manejar la expresión (suma y resta)
-    fn expresion(&mut self, table: &IdentifierTable) -> Operand {
-        let mut nodo = self.término(&table);
+    fn expresion(&mut self, table: &IdentifierTable<'a>) -> Result<Operand<'a>, ParseError> {
+        let mut node = self.term(table)?;
 
         while self.position < self.tokens.len() {
             match &self.tokens[self.position] {
                 Token::Operator(op) if *op == Operator::Add || *op == Operator::Sub => {
-                    self.position += 1; // Consumir el operador
-                    let derecho = self.término(&table);
-                    nodo = Operand::Operation(Operation {
-                        operator: op.clone(),
-                        left: Box::new(nodo),
-                        right: Box::new(derecho),
+                    let operator = op.clone();
+                    self.position += 1; // Consume the operator
+                    let right = self.term(table)?;
+                    node = Operand::Operation(Operation {
+                        operator,
+                        left: Box::new(node),
+                        right: Box::new(right),
                     });
                 }
                 _ => break,
             }
         }
 
-        nodo
+        Ok(node)
     }
 
     // Maneja multiplicación y división
-    fn término(&mut self, table: &IdentifierTable) -> Operand {
-        let mut nodo = self.factor(&table);
+    fn term(&mut self, table: &IdentifierTable<'a>) -> Result<Operand<'a>, ParseError> {
+        let mut node = self.factor(table)?;
 
         while self.position < self.tokens.len() {
             match &self.tokens[self.position] {
-                Token::Operator(op) => {
-                    self.position += 1; // Consumir el operador
-                    let derecho = self.factor(&table);
-                    if derecho == Operand::End {
-                        break;
-                    }
-                    nodo = Operand::Operation(Operation {
-                        operator: op.clone(),
-                        left: Box::new(nodo),
-                        right: Box::new(derecho),
+                Token::Operator(op)
+                    if matches!(
+                        op,
+                        Operator::Mul | Operator::Div | Operator::Mod | Operator::DivInt
+                    ) =>
+                {
+                    let operator = op.clone();
+                    self.position += 1; // Consume the operator
+                    let right = self.factor(table)?;
+                    node = Operand::Operation(Operation {
+                        operator,
+                        left: Box::new(node),
+                        right: Box::new(right),
                     });
                 }
                 _ => break,
             }
         }
 
-        nodo
+        Ok(node)
     }
 
     // Maneja números y paréntesis
-    fn factor(&mut self, table: &IdentifierTable) -> Operand {
+    fn factor(&mut self, table: &IdentifierTable<'a>) -> Result<Operand<'a>, ParseError> {
         if self.position >= self.tokens.len() {
-            return Operand::End;
-            // panic!("Expresión incompleta");
+            return Ok(Operand::End);
         }
 
         match &self.tokens[self.position] {
             Token::Number(n) => {
-                let nodo = Operand::Number(n.clone());
-                self.position += 1; // Consumir el número
-                nodo
+                self.position += 1; // Consume the number
+                Ok(Operand::Number(n.clone()))
             }
             Token::String(s) => {
-                let nodo = Operand::String(s.clone());
-                self.position += 1; // Consumir el número
-                nodo
+                self.position += 1; // Consume the string
+                Ok(Operand::String(s.clone()))
             }
-            Token::Identifier(i) => {
-                let value = table.get(i).unwrap();
-                let nodo = Operand::Identifier(i.clone(), Box::new(Operand::from_token(value)));
-                self.position += 1; // Consumir el número
-                nodo
+            Token::Identifier(name) => {
+                self.position += 1; // Consume the identifier
+                if let Some(&Token::Operator(Operator::Asign)) = self.tokens.get(self.position) {
+                    // Handle assignment
+                    let expr = self.expresion(table)?;
+                    Ok(Operand::Identifier(
+                        Box::leak(name.clone().into_boxed_str()),
+                        Some(Box::new(expr)),
+                    ))
+                } else {
+                    // Handle variable usage
+                    if let Some(value) = table.get(name) {
+                        Ok(Operand::Identifier(
+                            Box::leak(name.clone().into_boxed_str()),
+                            Some(Box::new(Operand::from_token(value))),
+                        ))
+                    } else {
+                        Err(ParseError::UndefinedVariable(name.to_string()))
+                    }
+                }
             }
             Token::StartParenthesis => {
-                self.position += 1; // Consumir '('
-
-                let nodo = self.expresion(&table);
-
-                if self.position >= self.tokens.len() {
-                    panic!(
-                        "{}",
-                        LexicError::SyntaxError(format!("'(' left in position {}", self.position))
-                    );
-                }
-
-                match &self.tokens[self.position] {
-                    Token::EndParenthesis => {
-                        self.position += 1; // Consumir ')'
-                        nodo
+                self.position += 1; // Consume '('
+                let expr = self.expresion(table)?;
+                match self.tokens.get(self.position) {
+                    Some(Token::EndParenthesis) => {
+                        self.position += 1; // Consume ')'
+                        Ok(expr)
                     }
-                    _ => {
-                        panic!(
-                            "{}",
-                            LexicError::SyntaxError(format!(
-                                "')' left in position {}",
-                                self.position
-                            ))
-                        );
-                    }
+                    _ => Err(ParseError::SyntaxError("Expected ')'".to_string())),
                 }
+            }
+            Token::Operator(op) if *op == Operator::Add || *op == Operator::Sub => {
+                let operator = op.clone();
+                self.position += 1; // Consume the unary operator
+                let operand = self.factor(table)?;
+                // Handle unary operations if necessary
+                Ok(Operand::Operation(Operation {
+                    operator,
+                    left: Box::new(Operand::Number(Number::Int(0))), // Assuming unary operation
+                    right: Box::new(operand),
+                }))
             }
             Token::Comment(_) | Token::Operator(_) | Token::NewLine | Token::EOF => {
                 self.position += 1; // Consumir comentario
