@@ -1,3 +1,4 @@
 hola = 2 * 2==4
 numero = 5 + 3 * (2 + 1)
 resultado = numero // 2
+string = "hola"

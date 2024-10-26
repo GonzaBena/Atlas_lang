@@ -1,13 +1,12 @@
 use crate::{
-    compiler::token::{Number, Token},
+    compiler::tokens::operator::Operator,
+    compiler::tokens::token::{Number, Token},
     error::lexic_errors::LexicError,
 };
 use std::{
     iter::Peekable,
     str::{Chars, FromStr},
 };
-
-use super::token::Operator;
 
 pub struct Lexer<'a> {
     input: Peekable<Chars<'a>>,

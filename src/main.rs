@@ -21,17 +21,17 @@ fn main() {
     // println!("Contenido: {}", content);
     let mut lexer = Lexer::new(&content);
     let tokens = lexer.tokenizer().unwrap();
-    println!("Tokens: {:#?}", tokens);
+    // println!("Tokens: {:#?}", tokens);
 
     let mut parser = Pars::new(&tokens);
-    println!("Parser: {:#?}", parser);
+    // println!("Parser: {:#?}", parser);
     let result = parser.parse();
     match result {
         Ok(r) => {
             for re in r.statements {
                 println!("Resultado: {}", re.resolve(&r.identifier_table).unwrap());
             }
-            println!("Tabla de identificadores: {:?}", r.identifier_table);
+            println!("Tabla de identificadores: \n{}", r.identifier_table);
         }
         Err(e) => println!("Error: {:#?}", e),
     }

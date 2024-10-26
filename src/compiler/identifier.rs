@@ -1,6 +1,7 @@
 use std::collections::HashMap;
+use std::fmt::Display;
 
-use super::token::Token;
+use super::tokens::token::Token;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct IdentifierTable<'a> {
@@ -24,5 +25,18 @@ impl<'a> IdentifierTable<'a> {
         } else {
             return None;
         }
+    }
+}
+
+impl Display for IdentifierTable<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let mut table = String::new();
+        table.push_str("{\n");
+        for (key, value) in &self.table {
+            table.push_str(&format!("  {}: {},\n", key, value));
+        }
+        table = table.trim().to_string() + "\n}";
+
+        write!(f, "{}", table)
     }
 }
