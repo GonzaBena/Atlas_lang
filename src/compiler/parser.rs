@@ -2,10 +2,13 @@ use crate::error::{lexic_errors::LexicError, parse_errors::ParseError};
 
 use super::{
     identifier::IdentifierTable,
-    tokens::operand::Operand,
-    tokens::operation::Operation,
-    tokens::operator::Operator,
-    tokens::token::{Number, Token},
+    tokens::{
+        keywords::Keyword,
+        operand::Operand,
+        operation::Operation,
+        operator::Operator,
+        token::{Number, Token},
+    },
 };
 
 #[derive(Debug)]
@@ -54,22 +57,27 @@ impl<'a> Parser<'a> {
             };
 
             // Intentar parsear una asignación primero
-            if let Some(Token::Identifier(_)) = line_parser.tokens.get(0) {
-                if line_parser.peek_operator(&Operator::Asign) {
-                    let result = line_parser.parse_assignment(&mut identifier_table).unwrap();
-                    if let Operand::Identifier(..) = result.clone() {
-                        if self.peek_operator(&Operator::Asign) {
-                            results.push(result);
-                            continue;
-                        } else {
-                            panic!("Error al parsear la línea: {:?}", line);
+            if let Some(Token::Keyword(k)) = line_parser.tokens.get(0) {
+                if k == &Keyword::Let || k == &Keyword::Const {
+                    let result = line_parser.parse_assignment(&mut identifier_table);
+                    match result {
+                        Ok(r) => match r {
+                            Operand::Identifier(_, val) => {
+                                results.push(*val.unwrap());
+                            }
+                            b => {
+                                results.push(b);
+                            }
+                        },
+                        Err(e) => {
+                            panic!("Error al parsear la línea: {:?}", e);
                         }
                     }
                     continue;
                 }
             }
 
-            let result = line_parser.expresion(&identifier_table).unwrap();
+            let result = line_parser.expresion(&mut identifier_table).unwrap();
             results.push(result);
         }
 
@@ -83,37 +91,89 @@ impl<'a> Parser<'a> {
         &mut self,
         table: &mut IdentifierTable<'a>,
     ) -> Result<Operand<'a>, ParseError> {
-        let identifier = if let Token::Identifier(name) = &self.tokens[self.position] {
-            name.clone()
-        } else {
-            return Err(ParseError::SyntaxError(format!(
-                "Expected identifier at position {}",
-                self.position
-            )));
-        };
-        self.position += 1; // Consume the identifier
+        // Keyword let or const followed by an identifier is expected
+        match &self.tokens[self.position] {
+            Token::Keyword(Keyword::Let) => {
+                self.position += 1; // Consume the keyword
 
-        // Expect assignment operator '='
-        if !self.consume_operator(&Operator::Asign)? {
-            return Err(ParseError::SyntaxError(format!(
-                "Expected '=' after identifier at position {}",
-                self.position
-            )));
+                // read the identifier
+                let identifier = if let Token::Identifier(name) = &self.tokens[self.position] {
+                    name.clone()
+                } else {
+                    return Err(ParseError::SyntaxError(format!(
+                        "Expected identifier at position {}",
+                        self.position
+                    )));
+                };
+                self.position += 1; // Consume the identifier
+
+                // Expect assignment operator '='
+                match self.consume_operator(&Operator::Asign) {
+                    Ok(true) => {
+                        // if the next token is a new line, Throw error because the identifier needs a value
+                        if let Token::NewLine = self.tokens[self.position] {
+                            return Err(ParseError::SyntaxError(format!(
+                                "Expected value after identifier at position {}",
+                                self.position
+                            )));
+                        }
+
+                        // Parse the right-hand expression
+                        let expr = self.expresion(table)?;
+
+                        // Resolve the expression and insert into the identifier table
+                        let value = expr.resolve(table).unwrap();
+                        table.insert(identifier.clone(), value.clone());
+                        return Ok(Operand::Identifier(
+                            Box::leak(identifier.into_boxed_str()),
+                            Some(Box::new(Operand::from_token(value))),
+                        ));
+                    }
+                    Ok(false) => {
+                        return Err(ParseError::SyntaxError(format!(
+                            "Expected '=' at position {}",
+                            self.position
+                        )));
+                    }
+                    Err(e) => {
+                        return Err(e);
+                    }
+                }
+            }
+            Token::Identifier(identifier) => {
+                self.position += 1; // Consume the identifier
+
+                // Expect assignment operator '='
+                if self.consume_operator(&Operator::Asign)? {
+                    // if there is a asignation operator, it's mean that the identifier is already declared
+                    if let Some(v) = table.get(identifier) {
+                        return Ok(Operand::Identifier(
+                            Box::leak(identifier.clone().into_boxed_str()),
+                            Some(Box::new(Operand::from_token(v.clone()))),
+                        ));
+                    } else {
+                        return Err(ParseError::UndefinedVariable(format!(
+                            "Doesn't exists the variable {}.\nYou need to define this variable before assign a value",
+                            identifier.to_string()
+                        )));
+                    }
+                } else {
+                    // Parse the right-hand expression
+                    let expr = self.expresion(table)?;
+                    return Ok(expr);
+                }
+            }
+            _ => {
+                // it's mean that the keyword doesn't exist
+                return Err(ParseError::SyntaxError(format!(
+                    "Expected 'let' at position {}",
+                    self.position
+                )));
+            }
         }
-
-        // Parse the right-hand expression
-        let expr = self.expresion(table)?;
-
-        // Resolve the expression and insert into the identifier table
-        let value = expr.resolve(table).unwrap();
-        table.insert(identifier.clone(), value.clone());
-
-        Ok(Operand::Identifier(
-            Box::leak(identifier.into_boxed_str()),
-            Some(Box::new(expr)),
-        ))
     }
 
+    #[allow(dead_code)]
     fn peek_operator(&self, op: &Operator) -> bool {
         self.tokens.get(self.position + 1).map_or(
             false,
@@ -126,6 +186,12 @@ impl<'a> Parser<'a> {
         if let Some(Token::Operator(current_op)) = self.tokens.get(self.position) {
             if current_op == op {
                 self.position += 1; // Consume the operator
+                if self.position >= self.tokens.len() {
+                    return Err(ParseError::SyntaxError(format!(
+                        "Expected value at position {}",
+                        self.position
+                    )));
+                }
                 return Ok(true);
             }
         }
@@ -133,7 +199,7 @@ impl<'a> Parser<'a> {
     }
 
     // Función principal para manejar la expresión (suma y resta)
-    fn expresion(&mut self, table: &IdentifierTable<'a>) -> Result<Operand<'a>, ParseError> {
+    fn expresion(&mut self, table: &mut IdentifierTable<'a>) -> Result<Operand<'a>, ParseError> {
         let mut node = self.term(table)?;
 
         while self.position < self.tokens.len() {
@@ -156,7 +222,7 @@ impl<'a> Parser<'a> {
     }
 
     // Maneja multiplicación y división
-    fn term(&mut self, table: &IdentifierTable<'a>) -> Result<Operand<'a>, ParseError> {
+    fn term(&mut self, table: &mut IdentifierTable<'a>) -> Result<Operand<'a>, ParseError> {
         let mut node = self.factor(table)?;
 
         while self.position < self.tokens.len() {
@@ -184,7 +250,7 @@ impl<'a> Parser<'a> {
     }
 
     // Maneja números y paréntesis
-    fn factor(&mut self, table: &IdentifierTable<'a>) -> Result<Operand<'a>, ParseError> {
+    fn factor(&mut self, table: &mut IdentifierTable<'a>) -> Result<Operand<'a>, ParseError> {
         if self.position >= self.tokens.len() {
             return Ok(Operand::End);
         }
@@ -197,6 +263,21 @@ impl<'a> Parser<'a> {
             Token::String(s) => {
                 self.position += 1; // Consume the string
                 Ok(Operand::String(s.clone()))
+            }
+            Token::Keyword(k) => {
+                self.position += 1; // Consume the keyword
+                match k {
+                    Keyword::Let => {
+                        let result = self.parse_assignment(table)?;
+                        Ok(result)
+                    }
+                    Keyword::True => Ok(Operand::Boolean(true)),
+                    Keyword::False => Ok(Operand::Boolean(false)),
+                    _ => Err(ParseError::SyntaxError(format!(
+                        "Unexpected keyword at position {}: {}",
+                        self.position, k
+                    ))),
+                }
             }
             Token::Identifier(name) => {
                 self.position += 1; // Consume the identifier
@@ -243,15 +324,18 @@ impl<'a> Parser<'a> {
             }
             Token::Comment(_) | Token::Operator(_) | Token::NewLine | Token::EOF => {
                 self.position += 1; // Consumir comentario
-                self.factor(&table)
+                self.factor(table)
             }
-            _ => panic!(
-                "{}",
-                LexicError::SyntaxError(format!(
-                    "Unexpected token in position {}: {}",
-                    self.position, self.tokens[self.position]
-                ))
-            ),
+            v => {
+                println!("v: {:?}", v);
+                panic!(
+                    "{}",
+                    LexicError::SyntaxError(format!(
+                        "Unexpected token in position {}: {}",
+                        self.position, self.tokens[self.position]
+                    ))
+                )
+            }
         }
     }
 }

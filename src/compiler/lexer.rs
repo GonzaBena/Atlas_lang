@@ -8,6 +8,8 @@ use std::{
     str::{Chars, FromStr},
 };
 
+use super::tokens::keywords::Keyword;
+
 pub struct Lexer<'a> {
     input: Peekable<Chars<'a>>,
 }
@@ -27,8 +29,11 @@ impl<'a> Lexer<'a> {
             match c {
                 // MARK: Identifiers
                 'a'..='z' | 'A'..='Z' | '_' => {
-                    let identifier = self.consume_identifier();
-                    tokens.push(Token::Identifier(identifier));
+                    let (identifier, keyword) = self.consume_identifier();
+                    match keyword {
+                        Some(k) => tokens.push(Token::Keyword(k)),
+                        None => tokens.push(Token::Identifier(identifier)),
+                    }
                 }
                 // MARK: Strings
                 '\'' | '"' => {
@@ -98,9 +103,11 @@ impl<'a> Lexer<'a> {
         Ok(tokens)
     }
 
-    fn consume_identifier(&mut self) -> String {
+    fn consume_identifier(&mut self) -> (String, Option<Keyword>) {
+        // (nombre, keyword)
         // let start_pos = self.input.clone();
         let mut identifier = String::new();
+
         while let Some(&c_inner) = self.input.peek() {
             if c_inner.is_alphanumeric() || c_inner == '_' {
                 identifier.push(c_inner);
@@ -109,7 +116,19 @@ impl<'a> Lexer<'a> {
                 break;
             }
         }
-        identifier
+
+        // if the identifier don't start with a letter or underscore, it's invalid
+        if !identifier.chars().next().unwrap().is_alphabetic()
+            && identifier.chars().next().unwrap() != '_'
+        {
+            panic!(
+                "Invalid identifier: '{}' \n A Identifier only can start a letter or '_' ",
+                identifier
+            );
+        }
+
+        // Check if the identifier is a keyword
+        (identifier.clone(), Keyword::from_str(identifier.as_str()))
     }
 
     fn consume_string(&mut self, quote: char) -> Result<String, LexicError> {

@@ -71,8 +71,8 @@ impl<'a> Operation<'a> {
                 if let Token::Number(l) = left {
                     if let Token::Number(r) = right {
                         return match r {
-                            Number::Int(i) => Ok(Token::Number(l.pow(i as i32))),
-                            Number::Float(f) => Ok(Token::Number(l.powf(f))),
+                            Number::Int(i) => Ok(Token::Number(l.pow(i))),
+                            Number::Float(f) => Ok(Token::Number(l.pow(f))),
                         };
                     } else {
                         Err(MathError::InvalidOperation(

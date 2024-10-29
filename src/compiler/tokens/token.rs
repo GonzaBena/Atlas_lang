@@ -4,7 +4,7 @@ use std::{
     str::FromStr,
 };
 
-use super::operator::Operator;
+use super::{keywords::Keyword, operator::Operator};
 
 use crate::error::lexic_errors::LexicError;
 
@@ -23,6 +23,7 @@ pub enum Token<'a> {
     Identifier(String),
     Operator(Operator),
     Comment(&'a str),
+    Keyword(Keyword),
     EOF,
     NewLine,
 
@@ -38,8 +39,28 @@ pub enum Token<'a> {
     EndParenthesis,
 }
 
+// Implement the Into trait for i64 and f64 to convert them into Number
+impl From<i64> for Number {
+    fn from(value: i64) -> Self {
+        Number::Int(value)
+    }
+}
+
+impl From<f64> for Number {
+    fn from(value: f64) -> Self {
+        Number::Float(value)
+    }
+}
+
 // MARK: Number impl
 impl Number {
+    pub fn new<T>(value: T) -> Number
+    where
+        T: Into<Number>,
+    {
+        value.into()
+    }
+
     // General Methods for Token
     pub fn to_string(&self) -> String {
         match self {
@@ -48,14 +69,20 @@ impl Number {
         }
     }
 
-    pub fn pow(&self, power: i32) -> Number {
-        return match self {
-            Number::Int(n) => Number::Int(n.pow(power as u32)),
-            Number::Float(n) => Number::Float(n.powi(power)),
+    pub fn pow<T>(&self, power: T) -> Number
+    where
+        T: Into<Number>,
+    {
+        let power: Number = power.into();
+        return match (self, power) {
+            (Number::Int(n), Number::Int(p)) => Number::Int(n.pow(p as u32)),
+            (Number::Float(n), Number::Int(p)) => Number::Float(n.powi(p as i32)),
+            (Number::Int(n), Number::Float(p)) => Number::Float((*n as f64).powf(p)),
+            (Number::Float(n), Number::Float(p)) => Number::Float(n.powf(p)),
         };
     }
 
-    pub fn powf(&self, power: f64) -> Number {
+    fn powf(&self, power: f64) -> Number {
         println!("power: {:?} {:?}", power, self);
         return match self {
             Number::Int(n) => Number::Float((*n as f64).powf(power)),
@@ -113,10 +140,28 @@ impl<'a> Display for Token<'a> {
     }
 }
 
-impl Add for Number {
+// impl Add for Number {
+//     type Output = Number;
+
+//     fn add(self, other: Self) -> Self::Output {
+//         let other = other.into();
+//         match (self, other) {
+//             (Number::Int(a), Number::Int(b)) => Number::Int(a + b),
+//             (Number::Float(a), Number::Float(b)) => Number::Float(a + b),
+//             (Number::Float(a), Number::Int(b)) => Number::Float(a + b as f64),
+//             (Number::Int(a), Number::Float(b)) => Number::Float(a as f64 + b),
+//         }
+//     }
+// }
+
+impl<T> Add<T> for Number
+where
+    T: Into<Number>,
+{
     type Output = Number;
 
-    fn add(self, other: Self) -> Self::Output {
+    fn add(self, other: T) -> Self::Output {
+        let other = other.into();
         match (self, other) {
             (Number::Int(a), Number::Int(b)) => Number::Int(a + b),
             (Number::Float(a), Number::Float(b)) => Number::Float(a + b),
@@ -146,10 +191,14 @@ impl<'a> Add for Token<'a> {
     }
 }
 
-impl Sub for Number {
+impl<T> Sub<T> for Number
+where
+    T: Into<Number>,
+{
     type Output = Number;
 
-    fn sub(self, other: Self) -> Self::Output {
+    fn sub(self, other: T) -> Self::Output {
+        let other = other.into();
         match (self, other) {
             (Number::Int(a), Number::Int(b)) => Number::Int(a - b),
             (Number::Float(a), Number::Float(b)) => Number::Float(a - b),
@@ -186,10 +235,14 @@ impl<'a> Sub for Token<'a> {
     }
 }
 
-impl Mul for Number {
+impl<T> Mul<T> for Number
+where
+    T: Into<Number>,
+{
     type Output = Number;
 
-    fn mul(self, other: Self) -> Self::Output {
+    fn mul(self, other: T) -> Self::Output {
+        let other = other.into();
         match (self, other) {
             (Number::Int(a), Number::Int(b)) => Number::Int(a * b),
             (Number::Float(a), Number::Float(b)) => Number::Float(a * b),
@@ -223,10 +276,14 @@ impl<'a> Mul for Token<'a> {
     }
 }
 
-impl Div for Number {
+impl<T> Div<T> for Number
+where
+    T: Into<Number>,
+{
     type Output = Number;
 
-    fn div(self, other: Self) -> Self::Output {
+    fn div(self, other: T) -> Self::Output {
+        let other = other.into();
         match (self, other) {
             (Number::Int(a), Number::Int(b)) => Number::Float(a as f64 / b as f64),
             (Number::Float(a), Number::Float(b)) => Number::Float(a as f64 / b as f64),
@@ -289,10 +346,14 @@ impl<'a> Div for Token<'a> {
     }
 }
 
-impl Rem for Number {
+impl<T> Rem<T> for Number
+where
+    T: Into<Number>,
+{
     type Output = Number;
 
-    fn rem(self, other: Self) -> Self::Output {
+    fn rem(self, other: T) -> Self::Output {
+        let other = other.into();
         match (self, other) {
             (Number::Int(a), Number::Int(b)) => Number::Int(a % b),
             (Number::Float(a), Number::Float(b)) => Number::Float(a % b),
@@ -355,6 +416,7 @@ impl<'a> Token<'a> {
             Token::Identifier(name) => name.to_string(),
             Token::Operator(op) => op.to_string(),
             Token::Comment(c) => c.to_string(),
+            Token::Keyword(k) => k.to_string(),
             Token::EOF => "EOF".to_string(),
             Token::NewLine => "\n".to_string(),
 
@@ -374,7 +436,7 @@ impl<'a> Token<'a> {
     pub fn pow(&self, power: Token<'a>) -> Token<'a> {
         match (self, power) {
             (Token::Number(n), Token::Number(p)) => match p {
-                Number::Int(p) => Token::Number(n.pow(p as i32)),
+                Number::Int(p) => Token::Number(n.pow(p)),
                 Number::Float(p) => Token::Number(n.powf(p)),
             },
             _ => panic!(

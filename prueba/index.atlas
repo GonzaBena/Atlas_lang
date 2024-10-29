@@ -1,4 +1,6 @@
-hola = 2 * 2==4
-numero = 5 + 3 * (2 + 1)
-resultado = numero // 2
-string = "hola"
+# TODO: Hola
+
+let hola = 2 * 2 == 4
+let numero = 5 + 3 * (2 + 1)
+let resultado = numero // 2
+let string = "hola"
