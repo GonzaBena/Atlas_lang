@@ -11,14 +11,14 @@ use super::{
 #[allow(dead_code)]
 pub struct Parser<'a> {
     /// List of tokens to parse
-    tokens: &'a [Token<'a>],
+    tokens: Vec<Token<'a>>,
     position: usize,
     variables: Rc<RefCell<VariableTable<'a>>>,
 }
 
 #[allow(dead_code)]
 impl<'a> Parser<'a> {
-    pub fn new(tokens: &'a [Token<'a>], variables: Option<Rc<RefCell<VariableTable<'a>>>>) -> Self {
+    pub fn new(tokens: Vec<Token<'a>>, variables: Option<Rc<RefCell<VariableTable<'a>>>>) -> Self {
         Parser {
             tokens,
             position: 0,
@@ -26,41 +26,55 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn parse(&mut self) -> Result<Vec<Token<'a>>, ParseError> {
+    fn internal_new(tokens: Vec<Token<'a>>, variables: Rc<RefCell<VariableTable<'a>>>) -> Self {
+        Parser {
+            tokens,
+            position: 0,
+            variables,
+        }
+    }
+
+    // fn start(&self) -> usize {}
+
+    pub fn parse(&mut self) -> Result<Vec<Token<'a>>, ParseError<'a>> {
         if !self.tokens.ends_with(&[Token::EOF]) {
             return Err(ParseError::UndefinedEOF);
         }
 
-        let mut results = Vec::new();
+        let results = Vec::new();
         let lines: Vec<&[Token<'a>]> = self.tokens.split(|t| *t == Token::NewLine).collect();
 
         for line in lines {
-            self.tokens = line; // Configura los tokens actuales
-            self.position = 0;
+            // let aux = end;
+            // end = end + line.len();
+            // start = aux;
+            println!("Line: {:?}", line);
+            let tokens = line.to_vec();
+            let mut line_parser: Parser<'a> = Parser::internal_new(tokens, self.variables.clone());
 
-            // Parsea una línea
-            if let Some(Token::Keyword(Keyword::Var)) = self.tokens.get(0) {
-                println!("Assign");
-                self.assignment()?;
+            if let Some(Token::Keyword(Keyword::Var)) = line.get(0) {
+                line_parser.assignment()?;
             } else {
-                results.push(self.resolve()?);
+                // results.push(line_parser.resolve()?);
             }
+            println!("\n\n{:#?}", line_parser);
         }
 
         Ok(results)
     }
 
-    fn assignment(&mut self) -> Result<(), ParseError> {
+    fn assignment(&mut self) -> Result<(), ParseError<'a>> {
         self.position += 1; // Consume `var`
 
         let identifier = match self.tokens.get(self.position) {
             Some(Token::Identifier(name)) => {
                 self.position += 1; // Consume el identificador
-                name
+                name.to_owned()
             }
             _ => {
-                let msg = format!("Expected identifier at position {}", self.position);
-                return Err(ParseError::SyntaxError(msg));
+                // let msg = format!("Expected identifier at position {}", self.position.clone());
+                // return Err(ParseError::SyntaxError(Box::leak(msg.into_boxed_str())));
+                return Ok(());
             }
         };
 
@@ -68,8 +82,9 @@ impl<'a> Parser<'a> {
         match self.tokens.get(self.position) {
             Some(Token::Operator(Operator::Assign)) => self.position += 1,
             _ => {
-                let msg = format!("Expected '=' at position {}", self.position);
-                return Err(ParseError::SyntaxError(msg));
+                // let msg = format!("Expected '=' at position {}", self.position.clone());
+                // return Err(ParseError::SyntaxError(Box::leak(msg.into_boxed_str())));
+                return Ok(());
             }
         }
 
@@ -78,12 +93,11 @@ impl<'a> Parser<'a> {
             Token::Operation(mut expr) => {
                 let value = expr.resolve().unwrap();
                 if value == Token::Void {
-                    return Err(ParseError::SyntaxError("error".to_string()));
+                    return Err(ParseError::SyntaxError("error"));
                 }
                 let variable =
                     Variable::new(identifier.to_string(), value.to_string(), value.clone(), 0);
 
-                // Inserta la variable en la tabla
                 self.variables
                     .borrow_mut()
                     .variables
@@ -104,7 +118,7 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    fn resolve(&mut self) -> Result<Token<'a>, ParseError> {
+    fn resolve(&mut self) -> Result<Token<'a>, ParseError<'a>> {
         let mut node = self.term()?;
 
         while self.position < self.tokens.len() {
@@ -122,7 +136,7 @@ impl<'a> Parser<'a> {
         Ok(node)
     }
 
-    fn term(&mut self) -> Result<Token<'a>, ParseError> {
+    fn term(&mut self) -> Result<Token<'a>, ParseError<'a>> {
         let mut node = self.factor()?;
 
         while self.position < self.tokens.len() {
@@ -134,7 +148,7 @@ impl<'a> Parser<'a> {
                     ) =>
                 {
                     let operator = op.clone();
-                    self.position += 1; // Consume the operator
+                    self.position += 1;
                     let right = self.factor()?;
                     node = Token::Operation(Operation::new(operator, node, right));
                 }
@@ -145,7 +159,7 @@ impl<'a> Parser<'a> {
         Ok(node)
     }
 
-    fn factor(&mut self) -> Result<Token<'a>, ParseError> {
+    fn factor(&mut self) -> Result<Token<'a>, ParseError<'a>> {
         if self.position >= self.tokens.len() {
             println!("El fin");
             return Ok(Token::Void);
@@ -177,10 +191,14 @@ impl<'a> Parser<'a> {
                     }
                     Keyword::True => Ok(Token::Boolean(true)),
                     Keyword::False => Ok(Token::Boolean(false)),
-                    _ => Err(ParseError::SyntaxError(format!(
-                        "Unexpected keyword at position {}: {}",
-                        self.position, k
-                    ))),
+                    _ => {
+                        let msg = format!(
+                            "Unexpected keyword at position {}: {}",
+                            self.position.clone(),
+                            k
+                        );
+                        Err(ParseError::SyntaxError(Box::leak(msg.into_boxed_str())))
+                    }
                 }
             }
 
@@ -190,17 +208,23 @@ impl<'a> Parser<'a> {
                     "Unexpected token in position {}: {}",
                     self.position, self.tokens[self.position]
                 );
-                panic!("{}", ParseError::SyntaxError(msg))
+                panic!(
+                    "{}",
+                    ParseError::SyntaxError(Box::leak(msg.into_boxed_str()))
+                )
             }
         }
     }
 
-    pub fn trim(&mut self) {
-        let tokens = self.tokens.iter().filter(|x| **x != Token::EOF);
+    pub fn trim<'b>(&mut self, tokens: &'a [Token<'a>])
+    where
+        'b: 'static,
+    {
+        let tokens = tokens.iter().filter(|x| **x != Token::EOF);
         let mut start = 0;
         let mut end = 0;
 
-        for i in self.tokens {
+        for i in self.tokens.iter() {
             if *i != Token::NewLine {
                 break;
             }
@@ -214,9 +238,10 @@ impl<'a> Parser<'a> {
             end += 1;
         }
 
-        let tokens = tokens.map(|x| x.to_owned()).collect::<Vec<_>>();
-        let vec = tokens[start..=end].to_vec();
-        self.tokens = Box::leak(Box::new(vec));
+        let tokens: Vec<Token<'a>> = tokens.map(|x| x.to_owned()).collect::<Vec<Token<'a>>>();
+        let vec: Vec<Token<'a>> = tokens[start..=end].to_vec().to_owned();
+        let refer = vec;
+        self.tokens = refer;
     }
 }
 
@@ -234,11 +259,11 @@ mod parser_test {
 
     #[test]
     fn new_test() {
-        let parser = Parser::new(&[], None);
+        let parser = Parser::new(vec![], None);
         assert_eq!(
             parser,
             Parser {
-                tokens: &[],
+                tokens: vec![],
                 position: 0,
                 variables: Rc::new(RefCell::new(VariableTable::new()))
             }
@@ -247,10 +272,10 @@ mod parser_test {
 
     #[test]
     fn parse_test() {
-        let mut lex = Lexer::new("var hola = 10\n");
+        let mut lex: Lexer<'static> = Lexer::new("var hola = 10\n");
         let tokens = lex.lex();
         println!("{:?}", tokens);
-        let mut parser = Parser::new(tokens.as_slice(), None);
+        let mut parser: Parser<'_> = Parser::new(tokens, None);
         let parse = parser.parse().unwrap();
 
         assert_eq!(parse, vec![])

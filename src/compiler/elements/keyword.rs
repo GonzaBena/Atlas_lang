@@ -3,6 +3,7 @@ use std::{fmt::Display, str::FromStr};
 use crate::compiler::error::lexic_error::LexicError;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum Keyword {
     Var,
     Const,

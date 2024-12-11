@@ -28,10 +28,10 @@ fn main() {
         let tokens = lex.lex();
         println!("Tokens: {:#?}", tokens);
 
-        let mut parser = parser::Parser::new(tokens.as_slice(), None);
+        let mut parser = parser::Parser::new(tokens, None);
         // println!("Parser: {:#?}", parser);
         let parse = parser.parse();
-        println!("Parser: {:#?}", parse);
+        println!("\n\nParser: {:#?}", parse);
     }
 
     // println!("{:#?}", args)

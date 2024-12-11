@@ -4,6 +4,7 @@
 /// - Logical operators (e.g., `&&`, `||`),
 /// - Comparison operators (e.g., `==`, `!=`, `<`, `>`), and others.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum Operator {
     /// Assignation
     Assign,

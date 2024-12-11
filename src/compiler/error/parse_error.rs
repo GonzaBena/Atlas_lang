@@ -1,14 +1,15 @@
 use std::{error::Error, fmt};
 
 #[derive(Debug)]
-pub enum ParseError {
+#[allow(dead_code)]
+pub enum ParseError<'a> {
     /// Indicate that the file doesn't correctly finish
     UndefinedEOF,
-    SyntaxError(String),
-    UndefinedVariable(String),
+    SyntaxError(&'a str),
+    UndefinedVariable(&'a str),
 }
 
-impl fmt::Display for ParseError {
+impl fmt::Display for ParseError<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::UndefinedEOF => write!(
@@ -21,4 +22,4 @@ impl fmt::Display for ParseError {
     }
 }
 
-impl Error for ParseError {}
+impl Error for ParseError<'_> {}

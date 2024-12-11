@@ -13,6 +13,7 @@ pub struct VariableTable<'a> {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct Variable<'a> {
     name: String,
     var_type: String,

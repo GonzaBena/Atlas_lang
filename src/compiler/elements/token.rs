@@ -5,6 +5,7 @@ use crate::types::basic::number::int32::Int32;
 
 /// Represent each possible token which you can use.
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub enum Token<'a> {
     // Basic
     /// used to represent variables or functions
@@ -47,7 +48,7 @@ impl Display for Token<'_> {
         match self {
             Token::Identifier(id) => write!(f, "{}", String::from(*id)),
             Token::Keyword(keyword) => write!(f, "{}", String::from(keyword.to_string())),
-            Token::Int32(num) => write!(f, "{}", String::from(num.to_string())),
+            Token::Int32(_) => write!(f, "{}", String::from("Int32")),
             Token::NewLine => write!(f, "{}", String::from("New Line")),
             Token::EOF => write!(f, "{}", String::from("EOF")),
             Token::Void => write!(f, "{}", String::from("Void")),
