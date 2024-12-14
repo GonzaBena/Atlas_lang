@@ -1,5 +1,5 @@
 use std::fmt;
-use std::ops::{Deref, DerefMut};
+use std::ops::{Add, Deref, DerefMut};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Int32 {
@@ -29,5 +29,14 @@ impl fmt::Display for Int32 {
 impl From<i32> for Int32 {
     fn from(value: i32) -> Self {
         Self { data: value }
+    }
+}
+
+impl Add for Int32 {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        let result = *self + *rhs;
+        Self { data: result }
     }
 }

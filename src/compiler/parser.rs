@@ -8,7 +8,6 @@ use super::{
 
 /// This struct is in charge of manage the logic and semantic
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct Parser<'a> {
     /// List of tokens to parse
     tokens: Vec<Token<'a>>,
@@ -16,9 +15,13 @@ pub struct Parser<'a> {
     variables: Rc<RefCell<VariableTable<'a>>>,
 }
 
-#[allow(dead_code)]
 impl<'a> Parser<'a> {
     pub fn new(tokens: Vec<Token<'a>>, variables: Option<Rc<RefCell<VariableTable<'a>>>>) -> Self {
+        let tokens: Vec<Token<'a>> = tokens
+            .iter()
+            .filter(|x| **x != Token::EOF)
+            .map(|x| x.to_owned())
+            .collect();
         Parser {
             tokens,
             position: 0,
@@ -36,28 +39,36 @@ impl<'a> Parser<'a> {
 
     // fn start(&self) -> usize {}
 
-    pub fn parse(&mut self) -> Result<Vec<Token<'a>>, ParseError<'a>> {
-        if !self.tokens.ends_with(&[Token::EOF]) {
-            return Err(ParseError::UndefinedEOF);
-        }
-
-        let results = Vec::new();
-        let lines: Vec<&[Token<'a>]> = self.tokens.split(|t| *t == Token::NewLine).collect();
+    pub fn parse(&mut self) -> Result<Vec<Token>, ParseError<'a>> {
+        let mut results = Vec::new();
+        let lines: Vec<&[Token<'a>]> = self
+            .tokens
+            .split(|t| *t == Token::NewLine)
+            .filter(|x| !x.is_empty())
+            .collect();
 
         for line in lines {
             // let aux = end;
             // end = end + line.len();
             // start = aux;
-            println!("Line: {:?}", line);
-            let tokens = line.to_vec();
-            let mut line_parser: Parser<'a> = Parser::internal_new(tokens, self.variables.clone());
+            let tokens: Vec<Token<'a>> = line
+                .iter()
+                .filter(|x| **x != Token::EOF)
+                .map(|x| x.to_owned())
+                .collect();
+            let mut line_parser: Parser<'_> = Parser::internal_new(tokens, self.variables.clone());
 
             if let Some(Token::Keyword(Keyword::Var)) = line.get(0) {
                 line_parser.assignment()?;
             } else {
-                // results.push(line_parser.resolve()?);
+                let result = line_parser.resolve()?;
+                if result != Token::Void {
+                    if let Token::Operation(mut operation) = result {
+                        let operation_result = operation.resolve().unwrap();
+                        results.push(operation_result);
+                    }
+                }
             }
-            println!("\n\n{:#?}", line_parser);
         }
 
         Ok(results)
@@ -91,27 +102,21 @@ impl<'a> Parser<'a> {
         // Resuelve la expresión de la derecha
         match self.resolve()? {
             Token::Operation(mut expr) => {
-                let value = expr.resolve().unwrap();
-                if value == Token::Void {
+                let value = expr.resolve()?;
+                if value == Token::<'a>::Void {
                     return Err(ParseError::SyntaxError("error"));
                 }
                 let variable =
                     Variable::new(identifier.to_string(), value.to_string(), value.clone(), 0);
 
-                self.variables
-                    .borrow_mut()
-                    .variables
-                    .insert(identifier.to_string(), variable);
+                let _ = self.variables.borrow_mut().insert(identifier, variable);
             }
             value => {
                 let variable =
                     Variable::new(identifier.to_string(), value.to_string(), value.clone(), 0);
 
                 // Inserta la variable en la tabla
-                self.variables
-                    .borrow_mut()
-                    .variables
-                    .insert(identifier.to_string(), variable);
+                let _ = (*self.variables.borrow_mut()).insert(identifier, variable);
             }
         }
 
@@ -120,6 +125,7 @@ impl<'a> Parser<'a> {
 
     fn resolve(&mut self) -> Result<Token<'a>, ParseError<'a>> {
         let mut node = self.term()?;
+        println!("node1: {:?}", node);
 
         while self.position < self.tokens.len() {
             match &self.tokens[self.position] {
@@ -129,6 +135,7 @@ impl<'a> Parser<'a> {
                     let right = self.term()?;
                     node = Token::Operation(Operation::new(operator, node, right));
                 }
+
                 _ => break,
             }
         }
@@ -138,6 +145,7 @@ impl<'a> Parser<'a> {
 
     fn term(&mut self) -> Result<Token<'a>, ParseError<'a>> {
         let mut node = self.factor()?;
+        println!("node2: {:?}", node);
 
         while self.position < self.tokens.len() {
             match &self.tokens[self.position] {
@@ -164,6 +172,7 @@ impl<'a> Parser<'a> {
             println!("El fin");
             return Ok(Token::Void);
         }
+        println!("Token: {:?}", self.tokens[self.position]);
 
         match &self.tokens[self.position] {
             Token::Int32(n) => {
@@ -202,6 +211,30 @@ impl<'a> Parser<'a> {
                 }
             }
 
+            Token::Identifier(var) => {
+                if let Ok(variable) = self.variables.borrow_mut().get(&var) {
+                    self.position += 1;
+                    return Ok(*variable.value.clone());
+                } else {
+                    let msg = format!("The variable '{var}' doesn't exists.");
+                    Err(ParseError::UndefinedVariable(Box::leak(
+                        msg.into_boxed_str(),
+                    )))
+                }
+            }
+
+            Token::Operator(op) if *op == Operator::Add || *op == Operator::Sub => {
+                let operator = op.clone();
+                self.position += 1; // Consume the unary operator
+                let operand = self.factor()?;
+                // Handle unary operations if necessary
+                Ok(Token::Operation(Operation::new(
+                    operator,
+                    Token::Void,
+                    operand,
+                )))
+            }
+
             v => {
                 println!("v: {:?}", v);
                 let msg = format!(
@@ -214,34 +247,6 @@ impl<'a> Parser<'a> {
                 )
             }
         }
-    }
-
-    pub fn trim<'b>(&mut self, tokens: &'a [Token<'a>])
-    where
-        'b: 'static,
-    {
-        let tokens = tokens.iter().filter(|x| **x != Token::EOF);
-        let mut start = 0;
-        let mut end = 0;
-
-        for i in self.tokens.iter() {
-            if *i != Token::NewLine {
-                break;
-            }
-            start += 1;
-        }
-
-        for i in tokens.clone().rev() {
-            if *i != Token::NewLine {
-                break;
-            }
-            end += 1;
-        }
-
-        let tokens: Vec<Token<'a>> = tokens.map(|x| x.to_owned()).collect::<Vec<Token<'a>>>();
-        let vec: Vec<Token<'a>> = tokens[start..=end].to_vec().to_owned();
-        let refer = vec;
-        self.tokens = refer;
     }
 }
 

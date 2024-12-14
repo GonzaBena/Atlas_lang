@@ -1,7 +1,7 @@
-use std::fmt::Display;
+use std::fmt::{Debug, Display};
 
 use super::{keyword::Keyword, operation::Operation, operator::Operator};
-use crate::types::basic::number::int32::Int32;
+use crate::{compiler::error::parse_error::ParseError, types::basic::number::int32::Int32};
 
 /// Represent each possible token which you can use.
 #[derive(Debug, Clone)]
@@ -43,6 +43,20 @@ pub enum Token<'a> {
 //     }
 // }
 
+// impl Debug for Token<'_> {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         match self {
+//             Token::Int32(num) => write!(f, "Int32({})", *num),
+//             Token::Keyword(_) => write!(f, "Keyword({})", self),
+//             Token::Identifier(_) => write!(f, "Identifier({})", self),
+//             Token::Boolean(_) => write!(f, "Boolean({})", self),
+//             Token::Operator(_) => write!(f, "Operator({})", self),
+//             Token::NewLine => write!(f, "NewLine"),
+//             _ => write!(f, "{}({})", self.to_string(), self),
+//         }
+//     }
+// }
+
 impl Display for Token<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -53,7 +67,7 @@ impl Display for Token<'_> {
             Token::EOF => write!(f, "{}", String::from("EOF")),
             Token::Void => write!(f, "{}", String::from("Void")),
             Token::Operator(op) => write!(f, "{}", String::from(op.to_string())),
-            _ => write!(f, "{}", String::from("")),
+            _ => write!(f, "{}", String::from("hola")),
         }
     }
 }
@@ -129,5 +143,31 @@ impl<'a> Token<'a> {
                 Token::Int32(999.into())
             }
         }
+    }
+
+    pub fn resolve(self) -> Result<Token<'a>, ParseError<'a>> {
+        match self {
+            Token::Operation(mut operation) => operation.resolve(),
+            v => Ok(v),
+        }
+    }
+}
+
+// Token Creation using From
+impl From<i32> for Token<'_> {
+    fn from(value: i32) -> Self {
+        Token::Int32(value.into())
+    }
+}
+
+impl<'a> From<bool> for Token<'a> {
+    fn from(value: bool) -> Self {
+        Token::Boolean(value)
+    }
+}
+
+impl<'a> From<&'a str> for Token<'a> {
+    fn from(value: &'a str) -> Self {
+        Token::Identifier(value)
     }
 }

@@ -33,6 +33,7 @@ impl<'a> Lexer<'a> {
         let mut result: Vec<Token<'a>> = vec![];
         while let Some(char) = self.content.peek() {
             match char {
+                // Words
                 'a'..='z' => {
                     let id = self.cut_identifier();
                     match id {
@@ -47,10 +48,8 @@ impl<'a> Lexer<'a> {
                         Err(err) => panic!("{:?}", err),
                     }
                 }
-                '=' => {
-                    self.content.next();
-                    result.push(Token::Operator(Operator::Assign));
-                }
+
+                // Numbers
                 '0'..='9' | '.' | ',' => {
                     let number = self.cut_number();
                     match number {
@@ -58,6 +57,22 @@ impl<'a> Lexer<'a> {
                         Err(err) => panic!("{:?}", err),
                     }
                 }
+
+                // Operators
+                '=' => {
+                    self.content.next();
+                    result.push(Token::Operator(Operator::Assign));
+                }
+                '+' => {
+                    self.content.next();
+
+                    if let Some('+') = self.content.peek() {
+                        result.push(Token::Operator(Operator::Add));
+                    }
+                    result.push(Token::Operator(Operator::Add));
+                }
+
+                // Others
                 ' ' => {
                     self.content.next();
                 }

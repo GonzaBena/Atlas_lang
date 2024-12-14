@@ -26,12 +26,13 @@ fn main() {
     for file in project.files {
         let mut lex = Lexer::new(&file.content);
         let tokens = lex.lex();
-        println!("Tokens: {:#?}", tokens);
+        println!("Tokens: {:?}", tokens);
 
         let mut parser = parser::Parser::new(tokens, None);
         // println!("Parser: {:#?}", parser);
+        println!("\n\nParser: {:?}", parser);
         let parse = parser.parse();
-        println!("\n\nParser: {:#?}", parse);
+        println!("\n\nParser: {:?}", parse.unwrap());
     }
 
     // println!("{:#?}", args)

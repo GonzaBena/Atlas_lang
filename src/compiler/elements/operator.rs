@@ -1,3 +1,5 @@
+use super::token::Token;
+
 /// Represents all possible operators in the language, including:
 /// - Assignment operators (e.g., `=`),
 /// - Arithmetic operators (e.g., `+`, `-`, `*`, `/`),
@@ -38,6 +40,26 @@ impl ToString for Operator {
             Operator::Div => String::from("/"),
             Operator::DivInt => String::from("//"),
             Operator::Mod => String::from("%"),
+        }
+    }
+}
+
+impl Operator {
+    pub fn execute<'a>(&self, left: Token<'a>, right: Token<'a>) -> Token<'a> {
+        let mut left = left;
+        let mut right = right;
+        if let Token::Operation(mut op) = left {
+            left = op.resolve().unwrap();
+        }
+        if let Token::Operation(mut op) = right {
+            right = op.resolve().unwrap();
+        }
+        match self {
+            Self::Add => match (left, right) {
+                (Token::Int32(num1), Token::Int32(num2)) => Token::to_number(num1 + num2),
+                _ => Token::EOF,
+            },
+            _ => left,
         }
     }
 }
