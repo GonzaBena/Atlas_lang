@@ -1,13 +1,13 @@
-use std::{cell::RefCell, rc::Rc};
-
 use super::{
     elements::{keyword::Keyword, operation::Operation, operator::Operator, token::Token},
     error::parse_error::ParseError,
     Variable, VariableTable,
 };
+use std::{cell::RefCell, rc::Rc};
 
 /// This struct is in charge of manage the logic and semantic
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct Parser<'a> {
     /// List of tokens to parse
     tokens: Vec<Token<'a>>,
@@ -15,6 +15,7 @@ pub struct Parser<'a> {
     variables: Rc<RefCell<VariableTable<'a>>>,
 }
 
+#[allow(dead_code)]
 impl<'a> Parser<'a> {
     pub fn new(tokens: Vec<Token<'a>>, variables: Option<Rc<RefCell<VariableTable<'a>>>>) -> Self {
         let tokens: Vec<Token<'a>> = tokens
@@ -37,7 +38,15 @@ impl<'a> Parser<'a> {
         }
     }
 
-    // fn start(&self) -> usize {}
+    pub fn get_variables(&self) -> Vec<(String, Variable<'a>)> {
+        let mut result = vec![];
+
+        for (key, variable) in self.variables.borrow().variables.iter() {
+            result.push((key.to_owned(), variable.to_owned()));
+        }
+
+        result
+    }
 
     pub fn parse(&mut self) -> Result<Vec<Token>, ParseError<'a>> {
         let mut results = Vec::new();
@@ -48,18 +57,29 @@ impl<'a> Parser<'a> {
             .collect();
 
         for line in lines {
-            // let aux = end;
-            // end = end + line.len();
-            // start = aux;
             let tokens: Vec<Token<'a>> = line
                 .iter()
                 .filter(|x| **x != Token::EOF)
                 .map(|x| x.to_owned())
                 .collect();
             let mut line_parser: Parser<'_> = Parser::internal_new(tokens, self.variables.clone());
-
             if let Some(Token::Keyword(Keyword::Var)) = line.get(0) {
                 line_parser.assignment()?;
+            } else if let Some(Token::Operator(op)) = line.get(1) {
+                println!("Operator: {op:?}");
+                if op.is_assignation() {
+                    line_parser.assignment()?;
+                } else {
+                    let result = line_parser.resolve()?;
+                    if result != Token::Void && result != Token::EOF {
+                        if let Token::Operation(mut operation) = result {
+                            let operation_result = operation.resolve().unwrap();
+                            if operation_result != Token::Void && operation_result != Token::EOF {
+                                results.push(operation_result);
+                            }
+                        }
+                    }
+                }
             } else {
                 let result = line_parser.resolve()?;
                 if result != Token::Void {
@@ -75,57 +95,106 @@ impl<'a> Parser<'a> {
     }
 
     fn assignment(&mut self) -> Result<(), ParseError<'a>> {
-        self.position += 1; // Consume `var`
+        // Detectamos si la asignación inicia con 'var'
+        let mut new_var = false;
+        if let Token::Keyword(Keyword::Var) = self.tokens[self.position] {
+            self.position += 1; // Consume `var`
+            new_var = true;
+        }
 
+        // Esperamos un identificador
         let identifier = match self.tokens.get(self.position) {
             Some(Token::Identifier(name)) => {
                 self.position += 1; // Consume el identificador
                 name.to_owned()
             }
             _ => {
-                // let msg = format!("Expected identifier at position {}", self.position.clone());
-                // return Err(ParseError::SyntaxError(Box::leak(msg.into_boxed_str())));
+                // Si no hay identificador, no podemos seguir
                 return Ok(());
             }
         };
 
-        // Verifica el operador de asignación
-        match self.tokens.get(self.position) {
-            Some(Token::Operator(Operator::Assign)) => self.position += 1,
+        // Obtenemos el operador de asignación: puede ser '=' o '+='
+        let operator = match self.tokens.get(self.position) {
+            Some(Token::Operator(op)) => {
+                self.position += 1; // Consume '='
+                op.clone()
+            }
+            // Si no hay operador de asignación válido, retornamos sin error.
+            // Podrías retornar un error si lo deseas.
             _ => {
-                // let msg = format!("Expected '=' at position {}", self.position.clone());
-                // return Err(ParseError::SyntaxError(Box::leak(msg.into_boxed_str())));
                 return Ok(());
             }
+        };
+
+        // Resolvemos la expresión del lado derecho
+        let value_token = self.resolve()?;
+        if operator.is_assignation() {
+            // Reasignación con suma: x += valor
+            let mut variable: Variable;
+            let mut table = self.variables.borrow_mut();
+            if let Ok(var) = table.get(&identifier) {
+                // Ejecutamos la operación sumando al valor actual
+                match value_token {
+                    Token::Operation(mut expr) => {
+                        let value = expr.resolve()?;
+                        if value == Token::Void {
+                            return Err(ParseError::SyntaxError(
+                                "Se esperaba un valor distinto a Void",
+                            ));
+                        }
+                        variable = var.clone();
+                        println!("Pow1");
+                        *variable.value = operator.execute(*var.value.clone(), value);
+                    }
+                    value => {
+                        variable = var.clone();
+                        println!("Pow2");
+                        *variable.value = operator.execute(*var.value.clone(), value);
+                    }
+                }
+            } else if new_var {
+                // Si se usó 'var' + '+=', no tiene mucho sentido, pues la variable no existe aún.
+                // Podríamos tratar este caso como un error.
+                return Err(ParseError::UndefinedVariable(Box::leak(
+                    format!("Variable {} not defined", identifier).into_boxed_str(),
+                )));
+            } else {
+                // Si no se usó var y la variable no existe, error.
+                return Err(ParseError::UndefinedVariable(Box::leak(
+                    format!("Variable {} not defined", identifier).into_boxed_str(),
+                )));
+            }
+            let _ = table.update(identifier, &mut variable);
+            return Ok(());
         }
 
-        // Resuelve la expresión de la derecha
-        match self.resolve()? {
+        let variable: Variable;
+
+        match value_token {
             Token::Operation(mut expr) => {
-                let value = expr.resolve()?;
-                if value == Token::<'a>::Void {
+                let value = expr.resolve().unwrap();
+                if value == Token::Void {
                     return Err(ParseError::SyntaxError("error"));
                 }
-                let variable =
+                variable =
                     Variable::new(identifier.to_string(), value.to_string(), value.clone(), 0);
-
-                let _ = self.variables.borrow_mut().insert(identifier, variable);
             }
             value => {
-                let variable =
+                variable =
                     Variable::new(identifier.to_string(), value.to_string(), value.clone(), 0);
-
-                // Inserta la variable en la tabla
-                let _ = (*self.variables.borrow_mut()).insert(identifier, variable);
             }
         }
+        self.variables
+            .borrow_mut()
+            .variables
+            .insert(identifier.to_string(), variable);
 
         Ok(())
     }
 
     fn resolve(&mut self) -> Result<Token<'a>, ParseError<'a>> {
         let mut node = self.term()?;
-        println!("node1: {:?}", node);
 
         while self.position < self.tokens.len() {
             match &self.tokens[self.position] {
@@ -145,14 +214,17 @@ impl<'a> Parser<'a> {
 
     fn term(&mut self) -> Result<Token<'a>, ParseError<'a>> {
         let mut node = self.factor()?;
-        println!("node2: {:?}", node);
 
         while self.position < self.tokens.len() {
             match &self.tokens[self.position] {
                 Token::Operator(op)
                     if matches!(
                         op,
-                        Operator::Mul | Operator::Div | Operator::Mod | Operator::DivInt
+                        Operator::Mul
+                            | Operator::Div
+                            | Operator::Mod
+                            | Operator::DivInt
+                            | Operator::Pow
                     ) =>
                 {
                     let operator = op.clone();
@@ -169,10 +241,8 @@ impl<'a> Parser<'a> {
 
     fn factor(&mut self) -> Result<Token<'a>, ParseError<'a>> {
         if self.position >= self.tokens.len() {
-            println!("El fin");
             return Ok(Token::Void);
         }
-        println!("Token: {:?}", self.tokens[self.position]);
 
         match &self.tokens[self.position] {
             Token::Int32(n) => {
@@ -223,6 +293,7 @@ impl<'a> Parser<'a> {
                 }
             }
 
+            // for positive or negative numbers
             Token::Operator(op) if *op == Operator::Add || *op == Operator::Sub => {
                 let operator = op.clone();
                 self.position += 1; // Consume the unary operator
@@ -236,11 +307,7 @@ impl<'a> Parser<'a> {
             }
 
             v => {
-                println!("v: {:?}", v);
-                let msg = format!(
-                    "Unexpected token in position {}: {}",
-                    self.position, self.tokens[self.position]
-                );
+                let msg = format!("Unexpected token in position {}: {}", self.position, v);
                 panic!(
                     "{}",
                     ParseError::SyntaxError(Box::leak(msg.into_boxed_str()))
@@ -279,7 +346,6 @@ mod parser_test {
     fn parse_test() {
         let mut lex: Lexer<'static> = Lexer::new("var hola = 10\n");
         let tokens = lex.lex();
-        println!("{:?}", tokens);
         let mut parser: Parser<'_> = Parser::new(tokens, None);
         let parse = parser.parse().unwrap();
 

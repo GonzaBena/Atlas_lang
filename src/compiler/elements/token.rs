@@ -1,7 +1,10 @@
 use std::fmt::{Debug, Display};
 
 use super::{keyword::Keyword, operation::Operation, operator::Operator};
-use crate::{compiler::error::parse_error::ParseError, types::basic::number::int32::Int32};
+use crate::{
+    compiler::error::parse_error::ParseError,
+    types::basic::number::{double::Double, int32::Int32},
+};
 
 /// Represent each possible token which you can use.
 #[derive(Debug, Clone)]
@@ -16,6 +19,7 @@ pub enum Token<'a> {
 
     // Datatypes
     Int32(Int32),
+    Double(Double),
     String(String),
     Boolean(bool),
     // Function(&'a str),
@@ -28,41 +32,13 @@ pub enum Token<'a> {
     Void,
 }
 
-// impl ToString for Token<'_> {
-//     fn to_string(&self) -> String {
-//         match self {
-//             Token::Identifier(id) => String::from(*id),
-//             Token::Keyword(keyword) => keyword.to_string(),
-//             Token::Int32(num) => num.to_string(),
-//             Token::NewLine => String::from("NewLine"),
-//             Token::EOF => String::from("EOF"),
-//             Token::Void => String::from("Void"),
-//             Token::Operator(op) => op.to_string(),
-//             _ => String::new(),
-//         }
-//     }
-// }
-
-// impl Debug for Token<'_> {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         match self {
-//             Token::Int32(num) => write!(f, "Int32({})", *num),
-//             Token::Keyword(_) => write!(f, "Keyword({})", self),
-//             Token::Identifier(_) => write!(f, "Identifier({})", self),
-//             Token::Boolean(_) => write!(f, "Boolean({})", self),
-//             Token::Operator(_) => write!(f, "Operator({})", self),
-//             Token::NewLine => write!(f, "NewLine"),
-//             _ => write!(f, "{}({})", self.to_string(), self),
-//         }
-//     }
-// }
-
 impl Display for Token<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Token::Identifier(id) => write!(f, "{}", String::from(*id)),
             Token::Keyword(keyword) => write!(f, "{}", String::from(keyword.to_string())),
             Token::Int32(_) => write!(f, "{}", String::from("Int32")),
+            Token::Double(_) => write!(f, "{}", String::from("Double")),
             Token::NewLine => write!(f, "{}", String::from("New Line")),
             Token::EOF => write!(f, "{}", String::from("EOF")),
             Token::Void => write!(f, "{}", String::from("Void")),
@@ -74,74 +50,47 @@ impl Display for Token<'_> {
 
 impl PartialEq for Token<'_> {
     fn eq(&self, other: &Self) -> bool {
-        self.to_string() == other.to_string()
+        match (self, other) {
+            (Token::Boolean(b1), Token::Boolean(b2)) => b1 == b2,
+            (Token::Int32(b1), Token::Int32(b2)) => b1 == b2,
+            (Token::Double(b1), Token::Double(b2)) => b1 == b2,
+            (Token::String(b1), Token::String(b2)) => b1 == b2,
+            (Token::Identifier(b1), Token::Identifier(b2)) => b1 == b2,
+            (Token::Operation(b1), Token::Operation(b2)) => {
+                b1.left == b2.left && b1.right == b2.right && b1.operator == b2.operator
+            }
+            (Token::Keyword(b1), Token::Keyword(b2)) => b1.to_string() == b2.to_string(),
+            (Token::Operator(b1), Token::Operator(b2)) => b1 == b2,
+
+            (t1, t2) => t1.to_string() == t2.to_string(),
+        }
     }
 }
 
+#[allow(dead_code)]
 impl<'a> Token<'a> {
-    pub fn to_number<T>(num: T) -> Token<'a>
+    pub fn to_number<T>(num: T, num_type: &str) -> Token<'a>
     where
         T: ToString,
     {
-        let mut id: String = num.to_string();
+        let id: String = num.to_string();
 
-        if id.starts_with('-') {
-            id = id[1..].to_string();
-            if id.starts_with('.') {
-                id = format!("-0{id}")
-            } else if id.ends_with('.') {
-                id = format!("-{id}00")
-            } else {
-                id = id.replace(',', "");
-            }
-        } else {
-            if id.starts_with('.') {
-                id = format!("0{id}")
-            } else if id.ends_with('.') {
-                id = format!("{id}00")
-            } else {
-                id = id.replace(',', "");
-            }
-        }
-
-        // Operate with Negative ways
-        if id.starts_with('-') {
-            // if let Ok(ni8) = id.parse::<i8>() {
-            //     // return Token::Int8(ni8.into());
-            // } else if let Ok(ni16) = id.parse::<i16>() {
-            //     // return Token::Int16(ni16.into());
-            // } else if let Ok(ni32) = id.parse::<i32>() {
-            //     return Token::Int32(ni32.into());
-            // } else if let Ok(ni64) = id.parse::<i64>() {
-            //     // return Token::Int64(ni64.into());
-            // } else if let Ok(ni128) = id.parse::<i128>() {
-            //     // return Token::Int128(ni128.into());
-            // }
-
-            if let Ok(ni32) = id.parse::<i32>() {
-                Token::Int32(ni32.into())
-            } else {
-                Token::Int32(999.into())
-            }
-        } else {
-            // Operate with Positive ways
-            // if let Ok(ni8) = id.parse::<u8>() {
-            //     // return Token::Int8(ni8.into());
-            // } else if let Ok(ni16) = id.parse::<u16>() {
-            //     // return Token::Int16(ni16.into());
-            // } else if let Ok(ni32) = id.parse::<u32>() {
-            //     return Token::Int32(ni32.into());
-            // } else if let Ok(ni64) = id.parse::<u64>() {
-            //     // return Token::Int64(ni64.into());
-            // } else if let Ok(ni128) = id.parse::<u128>() {
-            //     // return Token::Int128(ni128.into());
-            // }
-
-            if let Ok(ni32) = id.parse::<i32>() {
-                Token::Int32(ni32.into())
-            } else {
-                Token::Int32(999.into())
-            }
+        match num_type {
+            "Int32" => match id.parse::<f32>() {
+                Ok(value) => Token::Int32(Int32::new(value as i32)),
+                Err(_) => Token::EOF, // Si no se puede parsear, devolvemos un Token::EOF
+            },
+            "Double" => match id.parse::<f64>() {
+                Ok(value) => Token::Double(value.into()),
+                Err(_) => Token::EOF,
+            },
+            _ => {
+                return if id.contains('.') {
+                    Token::to_number(&id, "Double")
+                } else {
+                    Token::to_number(&id, "Int32")
+                };
+            } // Tipo no soportado
         }
     }
 
@@ -151,12 +100,31 @@ impl<'a> Token<'a> {
             v => Ok(v),
         }
     }
+
+    pub fn is_assignation(&self) -> bool {
+        if let Token::Operator(op) = self {
+            return op.is_assignation();
+        }
+        false
+    }
 }
 
 // Token Creation using From
 impl From<i32> for Token<'_> {
     fn from(value: i32) -> Self {
         Token::Int32(value.into())
+    }
+}
+
+impl From<u32> for Token<'_> {
+    fn from(value: u32) -> Self {
+        Token::Int32(value.into())
+    }
+}
+
+impl From<f64> for Token<'_> {
+    fn from(value: f64) -> Self {
+        Token::Double(value.into())
     }
 }
 

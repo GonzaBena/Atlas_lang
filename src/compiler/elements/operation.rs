@@ -5,9 +5,9 @@ use super::{operator::Operator, token::Token};
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct Operation<'a> {
-    operator: Operator,
-    left: Box<Token<'a>>,
-    right: Box<Token<'a>>,
+    pub(crate) operator: Operator,
+    pub(crate) left: Box<Token<'a>>,
+    pub(crate) right: Box<Token<'a>>,
 }
 
 #[allow(dead_code)]
@@ -34,6 +34,5 @@ impl<'a> Operation<'a> {
         let left = self.left.clone().resolve()?;
         let right = self.right.clone().resolve()?;
         Ok(self.operator.execute(left, right))
-        // Ok(Token::EOF)
     }
 }

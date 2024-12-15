@@ -53,7 +53,7 @@ impl<'a> Lexer<'a> {
                 '0'..='9' | '.' | ',' => {
                     let number = self.cut_number();
                     match number {
-                        Ok(num) => result.push(Token::to_number(num)),
+                        Ok(num) => result.push(Token::to_number(num, "")),
                         Err(err) => panic!("{:?}", err),
                     }
                 }
@@ -63,13 +63,76 @@ impl<'a> Lexer<'a> {
                     self.content.next();
                     result.push(Token::Operator(Operator::Assign));
                 }
+
                 '+' => {
                     self.content.next();
 
-                    if let Some('+') = self.content.peek() {
+                    if let Some('=') = self.content.peek() {
+                        self.content.next();
+                        result.push(Token::Operator(Operator::AddAssign));
+                    } else {
                         result.push(Token::Operator(Operator::Add));
                     }
-                    result.push(Token::Operator(Operator::Add));
+                }
+
+                '-' => {
+                    self.content.next();
+
+                    if let Some('=') = self.content.peek() {
+                        self.content.next();
+                        result.push(Token::Operator(Operator::SubAssign));
+                    } else {
+                        result.push(Token::Operator(Operator::Sub));
+                    }
+                }
+
+                '*' => {
+                    self.content.next();
+
+                    if let Some('=') = self.content.peek() {
+                        self.content.next();
+                        result.push(Token::Operator(Operator::MulAssign));
+                    } else if let Some('*') = self.content.peek() {
+                        self.content.next();
+                        if let Some('=') = self.content.peek() {
+                            self.content.next();
+                            result.push(Token::Operator(Operator::PowAssign));
+                        } else {
+                            result.push(Token::Operator(Operator::Pow));
+                        }
+                    } else {
+                        result.push(Token::Operator(Operator::Mul));
+                    }
+                }
+
+                '/' => {
+                    self.content.next();
+
+                    if let Some('=') = self.content.peek() {
+                        self.content.next();
+                        result.push(Token::Operator(Operator::DivAssign));
+                    } else if let Some('/') = self.content.peek() {
+                        self.content.next();
+                        if let Some('=') = self.content.peek() {
+                            self.content.next();
+                            result.push(Token::Operator(Operator::DivIntAssign));
+                        } else {
+                            result.push(Token::Operator(Operator::DivInt));
+                        }
+                    } else {
+                        result.push(Token::Operator(Operator::Div));
+                    }
+                }
+
+                '%' => {
+                    self.content.next();
+
+                    if let Some('=') = self.content.peek() {
+                        self.content.next();
+                        result.push(Token::Operator(Operator::ModAssign));
+                    } else {
+                        result.push(Token::Operator(Operator::Mod));
+                    }
                 }
 
                 // Others
@@ -82,7 +145,6 @@ impl<'a> Lexer<'a> {
                 }
                 _ => {
                     self.content.next();
-                    println!("Finalizado");
                     break;
                 }
             }

@@ -30,8 +30,18 @@ impl<'a> VariableTable<'a> {
         }
     }
 
-    pub fn get(&mut self, key: &str) -> Result<&Variable<'a>, ParseError<'a>> {
+    pub fn get(&self, key: &str) -> Result<&Variable<'a>, ParseError<'a>> {
         if let Some(var) = self.variables.get(key) {
+            Ok(var)
+        } else {
+            Err(ParseError::UndefinedVariable(Box::leak(
+                format!("The variable {key} doesn't exists.").into_boxed_str(),
+            )))
+        }
+    }
+
+    pub fn get_mut(&mut self, key: &str) -> Result<&mut Variable<'a>, ParseError<'a>> {
+        if let Some(var) = self.variables.get_mut(key) {
             Ok(var)
         } else {
             Err(ParseError::UndefinedVariable(Box::leak(
@@ -59,11 +69,12 @@ impl<'a> VariableTable<'a> {
     pub fn update(
         &mut self,
         key: &str,
-        value: Variable<'a>,
+        value: &mut Variable<'a>,
     ) -> Result<Variable<'a>, ParseError<'a>> {
-        if let Some(var) = self.variables.get_mut(key) {
+        if let Some(mut var) = self.variables.get_mut(key) {
             let aux = var.clone();
-            *var = value;
+            var = value;
+            self.variables.insert(key.to_string(), var.clone());
             Ok(aux)
         } else {
             Err(ParseError::UndefinedVariable(Box::leak(
