@@ -10,6 +10,7 @@ pub fn io_functions() -> HashMap<String, StdFunc> {
     functions.insert(
         "print".to_string(),
         StdFunc::new("print".to_string(), |args| {
+            println!("args: {args:?}");
             let mut txt = String::new();
             for arg in args {
                 txt.push_str(&format!(

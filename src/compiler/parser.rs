@@ -86,42 +86,24 @@ impl<'a> Parser<'a> {
 
     pub fn parse(&mut self) -> Result<Vec<Token<'a>>, ParseError> {
         let mut results = Vec::new();
-        // let lines: Vec<&[Token<'a>]> = self
-        //     .tokens
-        //     .split(|t| *t == Token::NewLine)
-        //     .filter(|x| !x.is_empty())
-        //     .collect();
 
-        let tokens: Vec<Token<'a>> = self
-            .tokens
-            .iter()
-            .filter(|x| **x != Token::EOF)
-            .map(|x| x.to_owned())
-            .collect();
-        if let Some(Token::Keyword(Keyword::Var)) = tokens.get(0) {
-            self.assignment()?;
-        } else if let Some(Token::Keyword(Keyword::Function)) = tokens.get(0) {
-            self.function_assignment()?;
-        } else if let Some(Token::Operator(op)) = tokens.get(1) {
-            if op.is_assignation() {
-                self.assignment()?;
-            } else {
-                let result = self.resolve()?;
-                if result != Token::Void && result != Token::EOF {
-                    if let Token::Operation(mut operation) = result {
-                        let operation_result = operation.resolve().unwrap();
-                        if operation_result != Token::Void && operation_result != Token::EOF {
-                            results.push(operation_result);
-                        }
-                    }
+        while self.position < self.tokens.len() {
+            let token = self.tokens[self.position].clone();
+            match token {
+                Token::Keyword(Keyword::Var) => {
+                    self.assignment()?;
                 }
-            }
-        } else {
-            let result = self.resolve()?;
-            if result != Token::Void {
-                if let Token::Operation(mut operation) = result {
-                    let operation_result = operation.resolve().unwrap();
-                    results.push(operation_result);
+                Token::Keyword(Keyword::Function) => {
+                    self.function_assignment()?;
+                }
+                Token::Operator(op) if op.is_assignation() => {
+                    self.assignment()?;
+                }
+                _ => {
+                    let result = self.resolve()?;
+                    if result != Token::Void && result != Token::EOF {
+                        results.push(result);
+                    }
                 }
             }
         }
@@ -485,9 +467,8 @@ impl<'a> Parser<'a> {
             Token::Identifier(var) => {
                 self.position += 1;
                 if let Some(Token::StartParenthesis) = &self.tokens.get(self.position) {
-                    self.position += 1;
+                    self.position += 1; // Avanza más allá del paréntesis inicial
                     let args = Parser::get_args(&self.tokens, &mut self.position);
-
                     let func = if let Ok(function) = self.functions.borrow().get(var) {
                         function
                     } else {
@@ -495,7 +476,6 @@ impl<'a> Parser<'a> {
                             "This function doesn't exist.".into(),
                         ));
                     };
-
                     match func {
                         Func::Std(std_func) => {
                             let result = std_func.call(args);

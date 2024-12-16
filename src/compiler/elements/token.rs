@@ -23,6 +23,7 @@ pub enum Token<'a> {
     Int32(Int32),
     Double(Double),
     String(String),
+    Str(&'a str),
     Boolean(bool),
     // Function(&'a str),
 
@@ -44,14 +45,15 @@ impl Display for Token<'_> {
         match self {
             Token::Identifier(id) => write!(f, "{}", String::from(*id)),
             Token::Keyword(keyword) => write!(f, "{}", String::from(keyword.to_string())),
-            Token::Int32(_) => write!(f, "{}", String::from("Int32")),
-            Token::Double(_) => write!(f, "{}", String::from("Double")),
-            Token::NewLine => write!(f, "{}", String::from("New Line")),
+            Token::Int32(num) => write!(f, "{num}"),
+            Token::Double(num) => write!(f, "{num}"),
+            Token::NewLine => write!(f, "{}", String::from("\n")),
             Token::EOF => write!(f, "{}", String::from("EOF")),
             Token::Void => write!(f, "{}", String::from("Void")),
             Token::Operator(op) => write!(f, "{}", String::from(op.to_string())),
             Token::Separator(op) => write!(f, "{op}"),
-            Token::String(string) => write!(f, "{string}"),
+            Token::String(string) => write!(f, "\"{string}\""),
+            Token::Str(string) => write!(f, "\"{string}\""),
             _ => write!(f, "{}", String::from("funcion")),
         }
     }
@@ -64,6 +66,7 @@ impl PartialEq for Token<'_> {
             (Token::Int32(i1), Token::Int32(i2)) => i1 == i2,
             (Token::Double(d1), Token::Double(d2)) => d1 == d2,
             (Token::String(s1), Token::String(s2)) => s1 == s2,
+            (Token::Str(s1), Token::Str(s2)) => s1 == s2,
             (Token::Identifier(id1), Token::Identifier(id2)) => id1 == id2,
             (Token::Operation(op1), Token::Operation(op2)) => op1 == op2,
             (Token::Keyword(k1), Token::Keyword(k2)) => k1 == k2,

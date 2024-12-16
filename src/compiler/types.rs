@@ -58,7 +58,7 @@ impl From<&Token<'_>> for Types {
             Token::Int32(_) => Self::Int32,
             Token::Double(_) => Self::Double,
             Token::String(_) => Self::String,
-            // Token::Str => Self::Str,
+            Token::Str(_) => Self::Str,
             Token::Void => Self::Void,
             // Token::Function => Self::Function,
             _ => Self::Void,
