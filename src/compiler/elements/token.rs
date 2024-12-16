@@ -2,7 +2,7 @@ use std::fmt::{Debug, Display};
 
 use super::{keyword::Keyword, operation::Operation, operator::Operator};
 use crate::{
-    compiler::error::parse_error::ParseError,
+    compiler::{error::parse_error::ParseError, function::Argument, types::Types},
     types::basic::number::{double::Double, int32::Int32},
 };
 
@@ -16,6 +16,8 @@ pub enum Token<'a> {
     Keyword(Keyword),
     Operation(Operation<'a>),
     Operator(Operator),
+    Type(Types),
+    Argument(Argument<'a>),
 
     // Datatypes
     Int32(Int32),
@@ -25,11 +27,16 @@ pub enum Token<'a> {
     // Function(&'a str),
 
     // Others
-    StartParenthesis,
-    EndParenthesis,
-    NewLine,
-    EOF,
-    Void,
+    StartParenthesis, // (
+    EndParenthesis,   // )
+    StartBracket,     // [
+    EndBracket,       // ]
+    StartBrace,       // {
+    EndBrace,         // }
+    Separator(char),  // ',', ';'
+    NewLine,          // \n
+    EOF,              // EOF
+    Void,             // void
 }
 
 impl Display for Token<'_> {
@@ -43,6 +50,7 @@ impl Display for Token<'_> {
             Token::EOF => write!(f, "{}", String::from("EOF")),
             Token::Void => write!(f, "{}", String::from("Void")),
             Token::Operator(op) => write!(f, "{}", String::from(op.to_string())),
+            Token::Separator(op) => write!(f, "{op}"),
             _ => write!(f, "{}", String::from("hola")),
         }
     }
@@ -52,17 +60,25 @@ impl PartialEq for Token<'_> {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Token::Boolean(b1), Token::Boolean(b2)) => b1 == b2,
-            (Token::Int32(b1), Token::Int32(b2)) => b1 == b2,
-            (Token::Double(b1), Token::Double(b2)) => b1 == b2,
-            (Token::String(b1), Token::String(b2)) => b1 == b2,
-            (Token::Identifier(b1), Token::Identifier(b2)) => b1 == b2,
-            (Token::Operation(b1), Token::Operation(b2)) => {
-                b1.left == b2.left && b1.right == b2.right && b1.operator == b2.operator
-            }
-            (Token::Keyword(b1), Token::Keyword(b2)) => b1.to_string() == b2.to_string(),
-            (Token::Operator(b1), Token::Operator(b2)) => b1 == b2,
-
-            (t1, t2) => t1.to_string() == t2.to_string(),
+            (Token::Int32(i1), Token::Int32(i2)) => i1 == i2,
+            (Token::Double(d1), Token::Double(d2)) => d1 == d2,
+            (Token::String(s1), Token::String(s2)) => s1 == s2,
+            (Token::Identifier(id1), Token::Identifier(id2)) => id1 == id2,
+            (Token::Operation(op1), Token::Operation(op2)) => op1 == op2,
+            (Token::Keyword(k1), Token::Keyword(k2)) => k1 == k2,
+            (Token::Operator(op1), Token::Operator(op2)) => op1 == op2,
+            (Token::StartParenthesis, Token::StartParenthesis) => true,
+            (Token::EndParenthesis, Token::EndParenthesis) => true,
+            (Token::StartBracket, Token::StartBracket) => true,
+            (Token::EndBracket, Token::EndBracket) => true,
+            (Token::StartBrace, Token::StartBrace) => true,
+            (Token::EndBrace, Token::EndBrace) => true,
+            (Token::NewLine, Token::NewLine) => true,
+            (Token::EOF, Token::EOF) => true,
+            (Token::Void, Token::Void) => true,
+            (Token::Separator(sep1), Token::Separator(sep2)) => sep1 == sep2,
+            (Token::Type(sep1), Token::Type(sep2)) => sep1 == sep2,
+            _ => false, // Si no hay coincidencia exacta, los tokens son diferentes
         }
     }
 }
@@ -110,6 +126,12 @@ impl<'a> Token<'a> {
 }
 
 // Token Creation using From
+impl From<String> for Token<'_> {
+    fn from(value: String) -> Self {
+        Token::String(value)
+    }
+}
+
 impl From<i32> for Token<'_> {
     fn from(value: i32) -> Self {
         Token::Int32(value.into())

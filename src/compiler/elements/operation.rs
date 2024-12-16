@@ -2,13 +2,19 @@ use crate::compiler::error::parse_error::ParseError;
 
 use super::{operator::Operator, token::Token};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 #[allow(dead_code)]
 pub struct Operation<'a> {
     pub(crate) operator: Operator,
     pub(crate) left: Box<Token<'a>>,
     pub(crate) right: Box<Token<'a>>,
 }
+
+// impl PartialEq for Operation<'_> {
+//     fn eq(&self, other: &Self) -> bool {
+//         self.operator == other.operator && self.left == other.left && self.right == other.right
+//     }
+// }
 
 #[allow(dead_code)]
 impl<'a> Operation<'a> {

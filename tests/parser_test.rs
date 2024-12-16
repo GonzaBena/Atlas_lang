@@ -1,4 +1,6 @@
-use atlas_lang::compiler::{elements::token::Token, lexer::Lexer, parser::Parser, Variable};
+use atlas_lang::compiler::{
+    elements::token::Token, lexer::Lexer, parser::Parser, types::Types, variable::Variable,
+};
 
 #[test]
 fn assignation_test() {
@@ -8,17 +10,12 @@ fn assignation_test() {
     ",
     );
     let tokens = lex.lex();
-    let mut parser = Parser::new(tokens, None);
+    let mut parser = Parser::new(tokens, None, None);
     let _ = parser.parse().unwrap();
 
     let result = vec![(
         "hola",
-        Variable::new(
-            "hola".to_string(),
-            "Int32".to_string(),
-            Token::Int32(10.into()),
-            0,
-        ),
+        Variable::new("hola".to_string(), Types::Int32, Token::Int32(10.into()), 0),
     )];
     let tuple = parser.get_variables();
 
@@ -37,7 +34,7 @@ fn add_test() {
     ",
     );
     let tokens = lex.lex();
-    let mut parser = Parser::new(tokens, None);
+    let mut parser = Parser::new(tokens, None, None);
     let parse = parser.parse().unwrap();
 
     assert_eq!(parse, vec![Token::Int32(20.into())])
@@ -52,7 +49,7 @@ fn add_assign_test() {
     ",
     );
     let tokens = lex.lex();
-    let mut parser = Parser::new(tokens, None);
+    let mut parser = Parser::new(tokens, None, None);
     let parse = parser.parse().unwrap();
 
     assert_eq!(parse, vec![]);
@@ -60,7 +57,7 @@ fn add_assign_test() {
         "hola",
         Variable::new(
             "hola".to_string(),
-            "Int32".to_string(),
+            Types::Int32,
             Token::Int32(20.into()),
             0,
         ),
@@ -82,7 +79,7 @@ fn sub_test() {
     ",
     );
     let tokens = lex.lex();
-    let mut parser = Parser::new(tokens, None);
+    let mut parser = Parser::new(tokens, None, None);
     let parse = parser.parse().unwrap();
 
     assert_eq!(parse, vec![Token::Int32(0.into())])
@@ -97,7 +94,7 @@ fn sub_assign_test() {
     ",
     );
     let tokens = lex.lex();
-    let mut parser = Parser::new(tokens, None);
+    let mut parser = Parser::new(tokens, None, None);
     let parse = parser.parse().unwrap();
 
     assert_eq!(parse, vec![]);
@@ -105,7 +102,7 @@ fn sub_assign_test() {
         "hola",
         Variable::new(
             "hola".to_string(),
-            "Int32".to_string(),
+            Types::Int32,
             Token::Int32(0.into()),
             0,
         ),
@@ -127,7 +124,7 @@ fn mul_test() {
     ",
     );
     let tokens = lex.lex();
-    let mut parser = Parser::new(tokens, None);
+    let mut parser = Parser::new(tokens, None, None);
     let parse = parser.parse().unwrap();
 
     assert_eq!(parse, vec![Token::Int32(50.into())])
@@ -142,7 +139,7 @@ fn mul_assign_test() {
     ",
     );
     let tokens = lex.lex();
-    let mut parser = Parser::new(tokens, None);
+    let mut parser = Parser::new(tokens, None, None);
     let parse = parser.parse().unwrap();
 
     assert_eq!(parse, vec![]);
@@ -150,7 +147,7 @@ fn mul_assign_test() {
         "hola",
         Variable::new(
             "hola".to_string(),
-            "Int32".to_string(),
+            Types::Int32,
             Token::Int32(50.into()),
             0,
         ),
@@ -172,7 +169,7 @@ fn div_test() {
     ",
     );
     let tokens = lex.lex();
-    let mut parser = Parser::new(tokens, None);
+    let mut parser = Parser::new(tokens, None, None);
     let parse = parser.parse().unwrap();
 
     assert_eq!(parse, vec![Token::Int32(5.into())])
@@ -187,7 +184,7 @@ fn div_assign_test() {
     ",
     );
     let tokens = lex.lex();
-    let mut parser = Parser::new(tokens, None);
+    let mut parser = Parser::new(tokens, None, None);
     let parse = parser.parse().unwrap();
 
     assert_eq!(parse, vec![]);
@@ -195,7 +192,7 @@ fn div_assign_test() {
         "hola",
         Variable::new(
             "hola".to_string(),
-            "Int32".to_string(),
+            Types::Int32,
             Token::Int32(5.into()),
             0,
         ),
@@ -217,7 +214,7 @@ fn int_div_test() {
     ",
     );
     let tokens = lex.lex();
-    let mut parser = Parser::new(tokens, None);
+    let mut parser = Parser::new(tokens, None, None);
     let parse = parser.parse().unwrap();
 
     assert_eq!(parse, vec![Token::Int32((3).into())])
@@ -232,7 +229,7 @@ fn int_div_assign_test() {
     ",
     );
     let tokens = lex.lex();
-    let mut parser = Parser::new(tokens, None);
+    let mut parser = Parser::new(tokens, None, None);
     let parse = parser.parse().unwrap();
 
     assert_eq!(parse, vec![]);
@@ -240,7 +237,7 @@ fn int_div_assign_test() {
         "hola",
         Variable::new(
             "hola".to_string(),
-            "Int32".to_string(),
+            Types::Int32,
             Token::Int32(3.into()),
             0,
         ),
@@ -262,7 +259,7 @@ fn modulo_test() {
     ",
     );
     let tokens = lex.lex();
-    let mut parser = Parser::new(tokens, None);
+    let mut parser = Parser::new(tokens, None, None);
     let parse = parser.parse().unwrap();
 
     assert_eq!(parse, vec![Token::Int32(1.into())])
@@ -277,7 +274,7 @@ fn modulo_assign_test() {
     ",
     );
     let tokens = lex.lex();
-    let mut parser = Parser::new(tokens, None);
+    let mut parser = Parser::new(tokens, None, None);
     let parse = parser.parse().unwrap();
 
     assert_eq!(parse, vec![]);
@@ -285,7 +282,7 @@ fn modulo_assign_test() {
         "hola",
         Variable::new(
             "hola".to_string(),
-            "Int32".to_string(),
+            Types::Int32,
             Token::Int32(1.into()),
             0,
         ),
@@ -313,7 +310,7 @@ fn power_test() {
     {
         println!("tokens: {token:?}",);
     }
-    let mut parser = Parser::new(tokens, None);
+    let mut parser = Parser::new(tokens, None, None);
     let parse = parser.parse().unwrap();
 
     assert_eq!(parse, vec![Token::Int32(8.into())])
@@ -334,7 +331,7 @@ fn power_assign_test() {
     {
         println!("tokens: {token:?}",);
     }
-    let mut parser = Parser::new(tokens, None);
+    let mut parser = Parser::new(tokens, None, None);
     let parse = parser.parse().unwrap();
 
     assert_eq!(parse, vec![]);
@@ -342,7 +339,7 @@ fn power_assign_test() {
         "hola",
         Variable::new(
             "hola".to_string(),
-            "Int32".to_string(),
+            Types::Int32,
             Token::Int32(8.into()),
             0,
         ),

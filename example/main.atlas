@@ -1,5 +1,1 @@
-var hola = 10
-var chau = 20
-
-hola + 10
-hola - 10
+print("hola mundo")

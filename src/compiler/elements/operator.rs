@@ -53,6 +53,9 @@ pub enum Operator {
 
     /// Module and Assignation
     ModAssign,
+
+    /// useless operator, It doesn't have use
+    Null,
 }
 
 impl ToString for Operator {
@@ -73,6 +76,7 @@ impl ToString for Operator {
             Operator::DivIntAssign => String::from("//="),
             Operator::Mod => String::from("%"),
             Operator::ModAssign => String::from("%="),
+            _ => String::from(""),
         }
     }
 }

@@ -11,27 +11,11 @@ pub enum Keyword {
     While,
     If,
     Else,
+    Function,
     EOF,
     True,
     False,
 }
-
-// impl ToString for Keyword {
-//     fn to_string(&self) -> String {
-//         match *self {
-//             Keyword::Var => String::from("Var"),
-//             Keyword::Const => String::from("Const"),
-//             Keyword::For => String::from("For"),
-//             Keyword::While => String::from("While"),
-//             Keyword::If => String::from("If"),
-//             Keyword::Else => String::from("Else"),
-//             Keyword::EOF => String::from("EOF"),
-//             Keyword::True => String::from("True"),
-//             Keyword::False => String::from("False"),
-//             // _ => String::new(),
-//         }
-//     }
-// }
 
 impl Display for Keyword {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -42,6 +26,7 @@ impl Display for Keyword {
             Keyword::While => write!(f, "While"),
             Keyword::If => write!(f, "If"),
             Keyword::Else => write!(f, "Else"),
+            Keyword::Function => write!(f, "Function"),
             Keyword::EOF => write!(f, "EOF"),
             Keyword::True => write!(f, "True"),
             Keyword::False => write!(f, "False"),
@@ -61,6 +46,7 @@ impl FromStr for Keyword {
             "if" => Ok(Keyword::If),
             "else" => Ok(Keyword::Else),
             "EOF" => Ok(Keyword::EOF),
+            "func" => Ok(Keyword::Function),
             _ => Err(LexicError::InvalidKeyword(format!(
                 "the word '{s}' isn't a Keyword."
             ))),

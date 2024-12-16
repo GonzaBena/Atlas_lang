@@ -1,7 +1,9 @@
 mod cli;
 mod compiler;
+mod std;
 mod types;
 
+use ::std::process;
 use atlas_lang::compiler::{lexer::Lexer, parser};
 use clap::Parser;
 use cli::Args;
@@ -12,7 +14,7 @@ fn main() {
     // Validación personalizada: si --y está presente, verificar que --init también lo esté
     if args.y && !args.init {
         eprintln!("Error: '--y' can only be used if '--init' is present.");
-        std::process::exit(1);
+        process::exit(1);
     }
 
     let verify = args.verify();
@@ -28,7 +30,7 @@ fn main() {
         let tokens = lex.lex();
         println!("Tokens: {:?}", tokens);
 
-        let mut parser = parser::Parser::new(tokens, None);
+        let mut parser = parser::Parser::new(tokens, None, None);
         // println!("Parser: {:#?}", parser);
         println!("\n\nParser: {:?}", parser);
         let parse = parser.parse();

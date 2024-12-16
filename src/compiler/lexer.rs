@@ -1,6 +1,7 @@
 use super::{
     elements::{keyword::Keyword, operator::Operator},
     error::lexic_error::LexicError,
+    types::Types,
 };
 use crate::compiler::elements::token::Token;
 use std::{
@@ -34,7 +35,7 @@ impl<'a> Lexer<'a> {
         while let Some(char) = self.content.peek() {
             match char {
                 // Words
-                'a'..='z' => {
+                'a'..='z' | 'A'..='Z' => {
                     let id = self.cut_identifier();
                     match id {
                         Ok(id) => match id.type_id {
@@ -44,13 +45,24 @@ impl<'a> Lexer<'a> {
                             IdentifierType::Keyword => {
                                 result.push(Token::Keyword(id.keyword.unwrap()))
                             }
+                            IdentifierType::Type => {
+                                result.push(Token::Type(id.return_type.unwrap()));
+                            }
                         },
+                        Err(err) => panic!("{:?}", err),
+                    }
+                }
+                '"' => {
+                    self.content.next();
+                    let id = self.cut_string();
+                    match id {
+                        Ok(id) => result.push(Token::String(id)),
                         Err(err) => panic!("{:?}", err),
                     }
                 }
 
                 // Numbers
-                '0'..='9' | '.' | ',' => {
+                '0'..='9' | '.' => {
                     let number = self.cut_number();
                     match number {
                         Ok(num) => result.push(Token::to_number(num, "")),
@@ -136,14 +148,56 @@ impl<'a> Lexer<'a> {
                 }
 
                 // Others
-                ' ' => {
+                ' ' | '\t' => {
                     self.content.next();
                 }
+
                 '\n' => {
                     self.content.next();
                     result.push(Token::NewLine);
                 }
+
+                ',' => {
+                    self.content.next();
+                    result.push(Token::Separator(','));
+                }
+
+                ':' => {
+                    self.content.next();
+                    result.push(Token::Separator(':'));
+                }
+
+                '(' => {
+                    self.content.next();
+                    result.push(Token::StartParenthesis);
+                }
+
+                ')' => {
+                    self.content.next();
+                    result.push(Token::EndParenthesis);
+                }
+
+                '[' => {
+                    self.content.next();
+                    result.push(Token::StartBracket);
+                }
+
+                ']' => {
+                    self.content.next();
+                    result.push(Token::EndBracket);
+                }
+                '{' => {
+                    self.content.next();
+                    result.push(Token::StartBrace);
+                }
+
+                '}' => {
+                    self.content.next();
+                    result.push(Token::EndBrace);
+                }
+
                 _ => {
+                    println!("char: {char:?}");
                     self.content.next();
                     break;
                 }
@@ -156,8 +210,52 @@ impl<'a> Lexer<'a> {
     fn cut_identifier(&mut self) -> Result<Identifier, LexicError> {
         let mut id = String::new();
 
+        while let Some(char) = self.content.peek() {
+            if *char == ' ' || !char.is_alphanumeric() {
+                break;
+            }
+            id.push(*char);
+            self.content.next();
+        }
+
+        if id.trim() == "" {
+            return Err(LexicError::InvalidIdentifier(format!(
+                "the id '{}' is invalid",
+                id
+            )));
+        }
+
+        if let Ok(types) = Types::from_str(id.as_str()) {
+            return Ok(Identifier {
+                value: None,
+                type_id: IdentifierType::Type,
+                keyword: None,
+                return_type: Some(types),
+            });
+        }
+
+        if let Ok(keyword) = Keyword::from_str(id.as_str()) {
+            return Ok(Identifier {
+                value: None,
+                type_id: IdentifierType::Keyword,
+                keyword: Some(keyword),
+                return_type: None,
+            });
+        }
+
+        Ok(Identifier {
+            value: Some(id),
+            type_id: IdentifierType::Id,
+            keyword: None,
+            return_type: None,
+        })
+    }
+
+    fn cut_string(&mut self) -> Result<String, LexicError> {
+        let mut id = String::new();
+
         while let Some(char) = self.content.next() {
-            if char == ' ' {
+            if char == '"' {
                 break;
             }
             id.push(char);
@@ -170,19 +268,7 @@ impl<'a> Lexer<'a> {
             )));
         }
 
-        if let Ok(keyword) = Keyword::from_str(id.as_str()) {
-            return Ok(Identifier {
-                value: None,
-                type_id: IdentifierType::Keyword,
-                keyword: Some(keyword),
-            });
-        }
-
-        Ok(Identifier {
-            value: Some(id),
-            type_id: IdentifierType::Id,
-            keyword: None,
-        })
+        Ok(id)
     }
 
     fn cut_number(&mut self) -> Result<String, LexicError> {
@@ -256,9 +342,11 @@ struct Identifier {
     value: Option<String>,
     type_id: IdentifierType,
     keyword: Option<Keyword>,
+    return_type: Option<Types>,
 }
 
 enum IdentifierType {
     Id,
     Keyword,
+    Type,
 }
