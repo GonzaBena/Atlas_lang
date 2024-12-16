@@ -15,33 +15,33 @@ impl<'a> VariableTable<'a> {
         }
     }
 
-    pub fn get(&self, key: &str) -> Result<&Variable<'a>, ParseError<'a>> {
+    pub fn get(&self, key: &str) -> Result<&Variable<'a>, ParseError> {
         if let Some(var) = self.variables.get(key) {
             Ok(var)
         } else {
-            Err(ParseError::UndefinedVariable(Box::leak(
-                format!("The variable {key} doesn't exists.").into_boxed_str(),
+            Err(ParseError::UndefinedVariable(format!(
+                "The variable {key} doesn't exists."
             )))
         }
     }
 
-    pub fn get_mut(&mut self, key: &str) -> Result<&mut Variable<'a>, ParseError<'a>> {
+    pub fn get_mut(&mut self, key: &str) -> Result<&mut Variable<'a>, ParseError> {
         if let Some(var) = self.variables.get_mut(key) {
             Ok(var)
         } else {
-            Err(ParseError::UndefinedVariable(Box::leak(
-                format!("The variable {key} doesn't exists.").into_boxed_str(),
+            Err(ParseError::UndefinedVariable(format!(
+                "The variable {key} doesn't exists."
             )))
         }
     }
 
-    pub fn insert(&mut self, key: &str, value: Variable<'a>) -> Result<(), ParseError<'a>> {
+    pub fn insert(&mut self, key: &str, value: Variable<'a>) -> Result<(), ParseError> {
         if !self.variables.contains_key(key) {
             self.variables.insert(key.to_string(), value);
             Ok(())
         } else if let Some(var) = self.variables.get_key_value(key) {
             if *var.1 == value {
-                return Err(ParseError::DefinedVariable("{var.1.name}"));
+                return Err(ParseError::DefinedVariable("{var.1.name}".into()));
             }
             self.variables.insert(key.to_string(), value);
             Ok(())
@@ -55,25 +55,25 @@ impl<'a> VariableTable<'a> {
         &mut self,
         key: &str,
         value: &mut Variable<'a>,
-    ) -> Result<Variable<'a>, ParseError<'a>> {
+    ) -> Result<Variable<'a>, ParseError> {
         if let Some(mut var) = self.variables.get_mut(key) {
             let aux = var.clone();
             var = value;
             self.variables.insert(key.to_string(), var.clone());
             Ok(aux)
         } else {
-            Err(ParseError::UndefinedVariable(Box::leak(
-                format!("The variable {key} doesn't exists.").into_boxed_str(),
+            Err(ParseError::UndefinedVariable(format!(
+                "The variable {key} doesn't exists."
             )))
         }
     }
 
-    fn delete_one(&mut self, key: &str) -> Result<Variable<'a>, ParseError<'a>> {
+    fn delete_one(&mut self, key: &str) -> Result<Variable<'a>, ParseError> {
         if let Some(var) = self.variables.remove(key) {
             Ok(var)
         } else {
-            Err(ParseError::UndefinedVariable(Box::leak(
-                format!("The variable {key} doesn't exists.").into_boxed_str(),
+            Err(ParseError::UndefinedVariable(format!(
+                "The variable {key} doesn't exists."
             )))
         }
     }

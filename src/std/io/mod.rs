@@ -10,9 +10,18 @@ pub fn io_functions() -> HashMap<String, StdFunc> {
     functions.insert(
         "print".to_string(),
         StdFunc::new("print".to_string(), |args| {
+            let mut txt = String::new();
             for arg in args {
-                println!("{}", arg);
+                txt.push_str(&format!(
+                    " {}",
+                    if arg.value.is_some() {
+                        arg.value.unwrap()
+                    } else {
+                        arg.default_value.unwrap()
+                    }
+                ));
             }
+            println!("{}", txt.trim());
             Ok(Token::Void)
         }),
     );

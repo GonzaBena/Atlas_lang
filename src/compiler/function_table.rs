@@ -23,35 +23,35 @@ impl<'a> FunctionTable<'a> {
         }
     }
 
-    pub fn get(&self, key: &str) -> Result<Func<'a>, ParseError<'a>> {
+    pub fn get(&self, key: &str) -> Result<Func<'a>, ParseError> {
         if let Some(var) = self.std.get(key) {
             Ok(Func::Std(var.clone()))
         } else if let Some(var) = self.functions.get(key) {
             Ok(Func::User(var.clone()))
         } else {
-            Err(ParseError::UndefinedVariable(Box::leak(
-                format!("The function {key} doesn't exists.").into_boxed_str(),
+            Err(ParseError::UndefinedVariable(format!(
+                "The function {key} doesn't exists."
             )))
         }
     }
 
-    pub fn get_mut(&mut self, key: &str) -> Result<&mut Function<'a>, ParseError<'a>> {
+    pub fn get_mut(&mut self, key: &str) -> Result<&mut Function<'a>, ParseError> {
         if let Some(var) = self.functions.get_mut(key) {
             Ok(var)
         } else {
-            Err(ParseError::UndefinedVariable(Box::leak(
-                format!("The function {key} doesn't exists.").into_boxed_str(),
+            Err(ParseError::UndefinedVariable(format!(
+                "The function {key} doesn't exists."
             )))
         }
     }
 
-    pub fn insert(&mut self, key: &str, value: Function<'a>) -> Result<(), ParseError<'a>> {
+    pub fn insert(&mut self, key: &str, value: Function<'a>) -> Result<(), ParseError> {
         if !self.functions.contains_key(key) {
             self.functions.insert(key.to_string(), value);
             Ok(())
         } else if let Some(var) = self.functions.get_key_value(key) {
             if *var.1 == value {
-                return Err(ParseError::DefinedVariable("{var.1.name}"));
+                return Err(ParseError::DefinedVariable(format!("1.name")));
             }
             self.functions.insert(key.to_string(), value);
             Ok(())
@@ -65,25 +65,25 @@ impl<'a> FunctionTable<'a> {
         &mut self,
         key: &str,
         value: &mut Function<'a>,
-    ) -> Result<Function<'a>, ParseError<'a>> {
+    ) -> Result<Function<'a>, ParseError> {
         if let Some(mut var) = self.functions.get_mut(key) {
             let aux = var.clone();
             var = value;
             self.functions.insert(key.to_string(), var.clone());
             Ok(aux)
         } else {
-            Err(ParseError::UndefinedVariable(Box::leak(
-                format!("The function {key} doesn't exists.").into_boxed_str(),
+            Err(ParseError::UndefinedVariable(format!(
+                "The function {key} doesn't exists."
             )))
         }
     }
 
-    fn delete_one(&mut self, key: &str) -> Result<Function<'a>, ParseError<'a>> {
+    fn delete_one(&mut self, key: &str) -> Result<Function<'a>, ParseError> {
         if let Some(var) = self.functions.remove(key) {
             Ok(var)
         } else {
-            Err(ParseError::UndefinedVariable(Box::leak(
-                format!("The function {key} doesn't exists.").into_boxed_str(),
+            Err(ParseError::UndefinedVariable(format!(
+                "The function {key} doesn't exists."
             )))
         }
     }

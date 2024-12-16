@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use super::error::parse_error::ParseError;
+use super::{elements::token::Token, error::parse_error::ParseError};
 
 #[derive(Debug, PartialEq, Clone)]
 #[allow(dead_code)]
@@ -36,7 +36,7 @@ impl Types {
 }
 
 impl FromStr for Types {
-    type Err = ParseError<'static>;
+    type Err = ParseError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "Boolean" => Ok(Self::Boolean),
@@ -46,7 +46,37 @@ impl FromStr for Types {
             "Str" => Ok(Self::Str),
             "Void" => Ok(Self::Void),
             "Function" => Ok(Self::Function),
-            _ => Err(ParseError::InvalidType("invalid type")),
+            _ => Err(ParseError::InvalidType("invalid type".into())),
+        }
+    }
+}
+
+impl From<&Token<'_>> for Types {
+    fn from(value: &Token<'_>) -> Self {
+        match value {
+            Token::Boolean(_) => Self::Boolean,
+            Token::Int32(_) => Self::Int32,
+            Token::Double(_) => Self::Double,
+            Token::String(_) => Self::String,
+            // Token::Str => Self::Str,
+            Token::Void => Self::Void,
+            // Token::Function => Self::Function,
+            _ => Self::Void,
+        }
+    }
+}
+
+impl From<Token<'_>> for Types {
+    fn from(value: Token<'_>) -> Self {
+        match value {
+            Token::Boolean(_) => Self::Boolean,
+            Token::Int32(_) => Self::Int32,
+            Token::Double(_) => Self::Double,
+            Token::String(_) => Self::String,
+            // Token::Str => Self::Str,
+            Token::Void => Self::Void,
+            // Token::Function => Self::Function,
+            _ => Self::Void,
         }
     }
 }

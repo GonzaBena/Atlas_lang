@@ -197,7 +197,6 @@ impl<'a> Lexer<'a> {
                 }
 
                 _ => {
-                    println!("char: {char:?}");
                     self.content.next();
                     break;
                 }

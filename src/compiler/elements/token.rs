@@ -2,7 +2,7 @@ use std::fmt::{Debug, Display};
 
 use super::{keyword::Keyword, operation::Operation, operator::Operator};
 use crate::{
-    compiler::{error::parse_error::ParseError, function::Argument, types::Types},
+    compiler::{error::parse_error::ParseError, types::Types},
     types::basic::number::{double::Double, int32::Int32},
 };
 
@@ -17,7 +17,7 @@ pub enum Token<'a> {
     Operation(Operation<'a>),
     Operator(Operator),
     Type(Types),
-    Argument(Argument<'a>),
+    // Argument(Argument<'a>),
 
     // Datatypes
     Int32(Int32),
@@ -51,7 +51,8 @@ impl Display for Token<'_> {
             Token::Void => write!(f, "{}", String::from("Void")),
             Token::Operator(op) => write!(f, "{}", String::from(op.to_string())),
             Token::Separator(op) => write!(f, "{op}"),
-            _ => write!(f, "{}", String::from("hola")),
+            Token::String(string) => write!(f, "{string}"),
+            _ => write!(f, "{}", String::from("funcion")),
         }
     }
 }
@@ -110,7 +111,7 @@ impl<'a> Token<'a> {
         }
     }
 
-    pub fn resolve(self) -> Result<Token<'a>, ParseError<'a>> {
+    pub fn resolve(self) -> Result<Token<'a>, ParseError> {
         match self {
             Token::Operation(mut operation) => operation.resolve(),
             v => Ok(v),

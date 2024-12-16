@@ -10,10 +10,21 @@ use super::{
 #[derive(Debug, PartialEq, Clone)]
 #[allow(dead_code)]
 pub struct Argument<'a> {
-    name: &'a str,
+    pub(crate) name: &'a str,
     var_type: Types,
-    default_value: Option<Box<Token<'a>>>,
-    value: Option<Box<Token<'a>>>,
+    pub(crate) default_value: Option<Box<Token<'a>>>,
+    pub(crate) value: Option<Box<Token<'a>>>,
+}
+
+impl<'a> From<Token<'a>> for Argument<'a> {
+    fn from(value: Token<'a>) -> Self {
+        Self {
+            name: "",
+            var_type: Types::from(&value),
+            default_value: Some(Box::new(value.clone())),
+            value: Some(Box::new(value)),
+        }
+    }
 }
 
 impl<'a> Argument<'a> {
@@ -99,7 +110,7 @@ impl<'a> Function<'a> {
 
     pub fn call(
         &self,
-        arguments: Vec<Token<'a>>,
+        arguments: Vec<Argument<'a>>,
         variables: Rc<RefCell<VariableTable<'a>>>,
         functions: Rc<RefCell<FunctionTable<'a>>>,
     ) -> Result<Token<'a>, FunctionError> {
@@ -133,13 +144,11 @@ impl<'a> Function<'a> {
             Some(Rc::new(RefCell::new(var_table))),
             Some(functions),
         );
-        let parse: Result<Vec<Token<'a>>, ParseError<'a>> = parser.parse();
+        let parse: Result<Vec<Token<'a>>, ParseError> = parser.parse();
         if parse.is_err() {
             return Err(FunctionError::ExecutionError(format!("r")));
         }
-        println!("parser: {parse:?}");
         let parse = parse.unwrap();
-        println!("return_type: {:?}", self.return_type);
         if self.return_type == Types::Void {
             return Ok(Token::Void);
         }

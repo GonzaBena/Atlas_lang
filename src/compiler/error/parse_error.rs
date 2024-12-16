@@ -2,19 +2,19 @@ use std::{error::Error, fmt};
 
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
-pub enum ParseError<'a> {
+pub enum ParseError {
     /// Indicate that the file doesn't correctly finish
     UndefinedEOF,
-    SyntaxError(&'a str),
-    UndefinedVariable(&'a str),
-    UndefinedFunction(&'a str),
-    InvalidType(&'a str),
-    DefinedVariable(&'a str),
-    DefinedFunction(&'a str),
-    FunctionExecution(&'a str),
+    SyntaxError(String),
+    UndefinedVariable(String),
+    UndefinedFunction(String),
+    InvalidType(String),
+    DefinedVariable(String),
+    DefinedFunction(String),
+    FunctionExecution(String),
 }
 
-impl fmt::Display for ParseError<'_> {
+impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::UndefinedEOF => write!(
@@ -39,4 +39,4 @@ impl fmt::Display for ParseError<'_> {
     }
 }
 
-impl Error for ParseError<'_> {}
+impl Error for ParseError {}

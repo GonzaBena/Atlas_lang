@@ -84,7 +84,7 @@ impl<'a> Parser<'a> {
         result
     }
 
-    pub fn parse(&mut self) -> Result<Vec<Token<'a>>, ParseError<'a>> {
+    pub fn parse(&mut self) -> Result<Vec<Token<'a>>, ParseError> {
         let mut results = Vec::new();
         // let lines: Vec<&[Token<'a>]> = self
         //     .tokens
@@ -129,7 +129,7 @@ impl<'a> Parser<'a> {
         Ok(results)
     }
 
-    fn function_assignment(&mut self) -> Result<(), ParseError<'a>> {
+    fn function_assignment(&mut self) -> Result<(), ParseError> {
         self.position += 1;
         // Esperamos un identificador
         let identifier = match self.tokens.get(self.position) {
@@ -149,7 +149,7 @@ impl<'a> Parser<'a> {
             }
             _ => {
                 // Si no hay identificador, no podemos seguir
-                return Err(ParseError::SyntaxError("Bad Function Definition"));
+                return Err(ParseError::SyntaxError("Bad Function Definition".into()));
             }
         };
 
@@ -166,7 +166,7 @@ impl<'a> Parser<'a> {
         // Verifica que `StartBrace` esté después de los argumentos
         if self.tokens.get(self.position) != Some(&Token::StartBrace) {
             return Err(ParseError::SyntaxError(
-                "Expected '{' after function arguments",
+                "Expected '{' after function arguments".into(),
             ));
         }
         self.position += 1; // Consume el `StartBrace`
@@ -193,15 +193,14 @@ impl<'a> Parser<'a> {
                 .collect::<Vec<&[Token<'a>]>>()
                 .as_slice()
             {
-                // println!("x: {x:?}");
                 // Procesa los elementos de forma segura
                 let name = name_slice.first().ok_or_else(|| {
-                    ParseError::SyntaxError("Argument name missing in function definition")
+                    ParseError::SyntaxError("Argument name missing in function definition".into())
                 })?;
 
                 if let Token::Identifier(_) = name {
                 } else {
-                    return Err(ParseError::SyntaxError("Invalid argument name"));
+                    return Err(ParseError::SyntaxError("Invalid argument name".into()));
                 };
 
                 if var_type_slice.len() > 1 {
@@ -211,7 +210,9 @@ impl<'a> Parser<'a> {
                         .is_some()
                     {
                         let var_type = var_type_slice.first().ok_or_else(|| {
-                            ParseError::SyntaxError("Argument type missing in function definition")
+                            ParseError::SyntaxError(
+                                "Argument type missing in function definition".into(),
+                            )
                         })?;
 
                         let operator = if let Some(Token::Operator(op)) = var_type_slice.get(1) {
@@ -228,11 +229,11 @@ impl<'a> Parser<'a> {
 
                         if value != Token::Void && operator != Operator::Assign {
                             return Err(ParseError::SyntaxError(
-                                "Argument assignation operator missing in function definition",
+                                "Argument assignation operator missing in function definition"
+                                    .into(),
                             ));
                         }
 
-                        println!("name: {name:?}, var_type: {var_type:?}, operator: {operator:?}, value: {value:?}");
                         let name = if let Token::Identifier(id) = name {
                             id
                         } else {
@@ -247,11 +248,13 @@ impl<'a> Parser<'a> {
 
                         arg_array.push(Argument::new(name, var_type, Some(Box::new(value)), None));
                     } else {
-                        return Err(ParseError::SyntaxError("Invalid argument type"));
+                        return Err(ParseError::SyntaxError("Invalid argument type".into()));
                     }
                 } else {
                     let var_type = var_type_slice.first().ok_or_else(|| {
-                        ParseError::SyntaxError("Argument type missing in function definition")
+                        ParseError::SyntaxError(
+                            "Argument type missing in function definition".into(),
+                        )
                     })?;
 
                     let name = if let Token::Identifier(id) = name {
@@ -269,24 +272,22 @@ impl<'a> Parser<'a> {
                     arg_array.push(Argument::new(name, var_type, None, None));
                 }
             } else {
-                return Err(ParseError::SyntaxError("Invalid argument format"));
+                return Err(ParseError::SyntaxError("Invalid argument format".into()));
             }
         }
-        println!("arguments: {arg_array:?}");
         let mut table = self.functions.borrow_mut();
         if let Ok(_) = table.get(identifier) {
-            return Err(ParseError::DefinedFunction(identifier));
+            return Err(ParseError::DefinedFunction(identifier.into()));
         } else {
             table.insert(
                 identifier,
                 Function::new(identifier, Types::Void, arg_array, content, 0),
             )?;
-            println!("table: {:?}", *table);
         }
         return Ok(());
     }
 
-    fn assignment(&mut self) -> Result<(), ParseError<'a>> {
+    fn assignment(&mut self) -> Result<(), ParseError> {
         // Detectamos si la asignación inicia con 'var'
         let mut new_var = false;
         if let Token::Keyword(Keyword::Var) = self.tokens[self.position] {
@@ -332,7 +333,7 @@ impl<'a> Parser<'a> {
                         let value = expr.resolve()?;
                         if value == Token::Void {
                             return Err(ParseError::SyntaxError(
-                                "Se esperaba un valor distinto a Void",
+                                "Se esperaba un valor distinto a Void".into(),
                             ));
                         }
                         variable = var.clone();
@@ -346,13 +347,15 @@ impl<'a> Parser<'a> {
             } else if new_var {
                 // Si se usó 'var' + '+=', no tiene mucho sentido, pues la variable no existe aún.
                 // Podríamos tratar este caso como un error.
-                return Err(ParseError::UndefinedVariable(Box::leak(
-                    format!("Variable {} not defined", identifier).into_boxed_str(),
+                return Err(ParseError::UndefinedVariable(format!(
+                    "Variable {} not defined",
+                    identifier
                 )));
             } else {
                 // Si no se usó var y la variable no existe, error.
-                return Err(ParseError::UndefinedVariable(Box::leak(
-                    format!("Variable {} not defined", identifier).into_boxed_str(),
+                return Err(ParseError::UndefinedVariable(format!(
+                    "Variable {} not defined",
+                    identifier
                 )));
             }
             let _ = table.update(identifier, &mut variable);
@@ -365,7 +368,7 @@ impl<'a> Parser<'a> {
             Token::Operation(mut expr) => {
                 let value = expr.resolve().unwrap();
                 if value == Token::Void {
-                    return Err(ParseError::SyntaxError("error"));
+                    return Err(ParseError::SyntaxError("error".into()));
                 }
                 let var_type = Types::from_str(&value.to_string())?;
                 variable = Variable::new(identifier.to_string(), var_type, value.clone(), 0);
@@ -383,7 +386,7 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    fn resolve(&mut self) -> Result<Token<'a>, ParseError<'a>> {
+    fn resolve(&mut self) -> Result<Token<'a>, ParseError> {
         let mut node = self.term()?;
 
         while self.position < self.tokens.len() {
@@ -402,7 +405,7 @@ impl<'a> Parser<'a> {
         Ok(node)
     }
 
-    fn term(&mut self) -> Result<Token<'a>, ParseError<'a>> {
+    fn term(&mut self) -> Result<Token<'a>, ParseError> {
         let mut node = self.factor()?;
 
         while self.position < self.tokens.len() {
@@ -429,7 +432,7 @@ impl<'a> Parser<'a> {
         Ok(node)
     }
 
-    fn factor(&mut self) -> Result<Token<'a>, ParseError<'a>> {
+    fn factor(&mut self) -> Result<Token<'a>, ParseError> {
         if self.position >= self.tokens.len() {
             return Ok(Token::Void);
         }
@@ -474,7 +477,7 @@ impl<'a> Parser<'a> {
                             self.position.clone(),
                             k
                         );
-                        Err(ParseError::SyntaxError(Box::leak(msg.into_boxed_str())))
+                        Err(ParseError::SyntaxError(msg))
                     }
                 }
             }
@@ -482,32 +485,14 @@ impl<'a> Parser<'a> {
             Token::Identifier(var) => {
                 self.position += 1;
                 if let Some(Token::StartParenthesis) = &self.tokens.get(self.position) {
-                    // if let Some(Token::StartBrace) = &self.tokens.get(self.position) {
-                    //     return Err(ParseError::SyntaxError(
-                    //         "You must use Func keyword to define functions.",
-                    //     ));
-                    // }
-
-                    let mut args = vec![];
-                    let mut scopes = 1;
-
-                    while let Some(token) = self.tokens.get(self.position) {
-                        if *token == Token::EndParenthesis && scopes == 1 {
-                            self.position += 1;
-                            break;
-                        }
-                        if *token == Token::StartParenthesis {
-                            scopes += 1;
-                        }
-                        args.push(token.clone());
-                        self.position += 1;
-                    }
+                    self.position += 1;
+                    let args = Parser::get_args(&self.tokens, &mut self.position);
 
                     let func = if let Ok(function) = self.functions.borrow().get(var) {
                         function
                     } else {
                         return Err(ParseError::UndefinedFunction(
-                            "This function doesn't exist.",
+                            "This function doesn't exist.".into(),
                         ));
                     };
 
@@ -515,9 +500,7 @@ impl<'a> Parser<'a> {
                         Func::Std(std_func) => {
                             let result = std_func.call(args);
                             if let Err(err) = result {
-                                return Err(ParseError::FunctionExecution(Box::leak(
-                                    err.to_string().into_boxed_str(),
-                                )));
+                                return Err(ParseError::FunctionExecution(err.to_string()));
                             }
                             return Ok(result.unwrap());
                         }
@@ -525,21 +508,16 @@ impl<'a> Parser<'a> {
                             let result =
                                 func.call(args, self.variables.clone(), self.functions.clone());
                             if let Err(err) = result {
-                                return Err(ParseError::FunctionExecution(Box::leak(
-                                    err.to_string().into_boxed_str(),
-                                )));
+                                return Err(ParseError::FunctionExecution(err.to_string()));
                             }
                             return Ok(result.unwrap());
                         }
                     }
-                    return Ok(Token::Void);
                 } else if let Ok(variable) = self.variables.borrow_mut().get(&var) {
                     return Ok(*variable.value.clone());
                 } else {
                     let msg = format!("The variable '{var}' doesn't exists.");
-                    Err(ParseError::UndefinedVariable(Box::leak(
-                        msg.into_boxed_str(),
-                    )))
+                    Err(ParseError::UndefinedVariable(msg))
                 }
             }
 
@@ -558,28 +536,26 @@ impl<'a> Parser<'a> {
 
             v => {
                 let msg = format!("Unexpected token in position {}: {}", self.position, v);
-                panic!(
-                    "{}",
-                    ParseError::SyntaxError(Box::leak(msg.into_boxed_str()))
-                )
+                panic!("{}", ParseError::SyntaxError(msg));
             }
         }
     }
 
-    fn get_args(&mut self) -> Vec<Token<'a>> {
+    fn get_args(tokens: &[Token<'a>], position: &mut usize) -> Vec<Argument<'a>> {
         let mut result = vec![];
         let mut scopes = 1;
 
-        while let Some(token) = self.tokens.get(self.position) {
+        while *position < tokens.len() {
+            let token = &tokens[*position];
             if *token == Token::EndParenthesis && scopes == 1 {
-                self.position += 1;
+                *position += 1;
                 break;
             }
             if *token == Token::StartParenthesis {
                 scopes += 1;
             }
-            result.push(token.clone());
-            self.position += 1;
+            result.push(Argument::from(token.clone()));
+            *position += 1;
         }
 
         result

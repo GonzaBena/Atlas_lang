@@ -36,7 +36,7 @@ impl<'a> Operation<'a> {
         }
     }
 
-    pub fn resolve(&mut self) -> Result<Token<'a>, ParseError<'a>> {
+    pub fn resolve(&mut self) -> Result<Token<'a>, ParseError> {
         let left = self.left.clone().resolve()?;
         let right = self.right.clone().resolve()?;
         Ok(self.operator.execute(left, right))

@@ -1,4 +1,4 @@
-use crate::compiler::elements::token::Token;
+use crate::compiler::{elements::token::Token, function::Argument};
 use std::{collections::HashMap, fmt::Debug, sync::Arc};
 
 mod io;
@@ -19,7 +19,7 @@ pub fn standard_library() -> HashMap<String, StdFunc> {
 #[derive(Clone)]
 pub struct StdFunc {
     pub name: String,
-    pub execute: Arc<dyn Fn(Vec<Token>) -> Result<Token, String> + Send + Sync>,
+    pub execute: Arc<dyn Fn(Vec<Argument>) -> Result<Token, String> + Send + Sync>,
 }
 
 impl Debug for StdFunc {
@@ -31,7 +31,7 @@ impl Debug for StdFunc {
 impl StdFunc {
     pub fn new<F>(name: String, func: F) -> Self
     where
-        F: 'static + Fn(Vec<Token>) -> Result<Token, String> + Send + Sync,
+        F: 'static + Fn(Vec<Argument>) -> Result<Token, String> + Send + Sync,
     {
         Self {
             name,
@@ -39,7 +39,7 @@ impl StdFunc {
         }
     }
 
-    pub fn call<'a>(&self, args: Vec<Token<'a>>) -> Result<Token<'a>, String> {
+    pub fn call<'a>(&self, args: Vec<Argument<'a>>) -> Result<Token<'a>, String> {
         (self.execute)(args)
     }
 }
