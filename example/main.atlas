@@ -1,5 +1,5 @@
 print("hola mundo")
 print(1)
-print(10)
+print( 10 + 10 )
 print(10.0)
 print(25.6)

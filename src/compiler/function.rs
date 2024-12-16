@@ -11,7 +11,7 @@ use super::{
 #[allow(dead_code)]
 pub struct Argument<'a> {
     pub(crate) name: &'a str,
-    var_type: Types,
+    pub(crate) var_type: Types,
     pub(crate) default_value: Option<Box<Token<'a>>>,
     pub(crate) value: Option<Box<Token<'a>>>,
 }

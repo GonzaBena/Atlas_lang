@@ -31,7 +31,7 @@ impl Types {
     }
 
     pub fn is_numeric(&self) -> bool {
-        self.is_float() && self.is_integer()
+        self.is_float() || self.is_integer()
     }
 }
 

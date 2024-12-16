@@ -102,7 +102,11 @@ impl<'a> Parser<'a> {
                 _ => {
                     let result = self.resolve()?;
                     if result != Token::Void && result != Token::EOF {
-                        results.push(result);
+                        let data = match result {
+                            Token::Operation(mut op) => op.resolve()?,
+                            v => v,
+                        };
+                        results.push(data);
                     }
                 }
             }
@@ -425,6 +429,11 @@ impl<'a> Parser<'a> {
                 Ok(Token::Int32(*n))
             }
 
+            Token::Double(n) => {
+                self.position += 1; // Consume the number
+                Ok(Token::Double(*n))
+            }
+
             Token::EOF => {
                 self.position += 1; // Consume the number
                 return Ok(Token::Void);
@@ -468,7 +477,12 @@ impl<'a> Parser<'a> {
                 self.position += 1;
                 if let Some(Token::StartParenthesis) = &self.tokens.get(self.position) {
                     self.position += 1; // Avanza más allá del paréntesis inicial
-                    let args = Parser::get_args(&self.tokens, &mut self.position);
+                    let args = Parser::get_args(
+                        &self.tokens,
+                        &mut self.position,
+                        self.variables.borrow().clone(),
+                        self.functions.borrow().clone(),
+                    );
                     let func = if let Ok(function) = self.functions.borrow().get(var) {
                         function
                     } else {
@@ -478,7 +492,7 @@ impl<'a> Parser<'a> {
                     };
                     match func {
                         Func::Std(std_func) => {
-                            let result = std_func.call(args);
+                            let result = std_func.call(args?);
                             if let Err(err) = result {
                                 return Err(ParseError::FunctionExecution(err.to_string()));
                             }
@@ -486,7 +500,7 @@ impl<'a> Parser<'a> {
                         }
                         Func::User(func) => {
                             let result =
-                                func.call(args, self.variables.clone(), self.functions.clone());
+                                func.call(args?, self.variables.clone(), self.functions.clone());
                             if let Err(err) = result {
                                 return Err(ParseError::FunctionExecution(err.to_string()));
                             }
@@ -515,16 +529,21 @@ impl<'a> Parser<'a> {
             }
 
             v => {
-                let msg = format!("Unexpected token in position {}: {}", self.position, v);
+                let msg = format!("Unexpected token in position {}: {:?}", self.position, v);
                 panic!("{}", ParseError::SyntaxError(msg));
             }
         }
     }
 
-    fn get_args(tokens: &[Token<'a>], position: &mut usize) -> Vec<Argument<'a>> {
+    /// For any transformation you want to make to the arguments, you must change the body of this function.
+    fn get_args(
+        tokens: &[Token<'a>],
+        position: &mut usize,
+        variables: VariableTable<'a>,
+        functions: FunctionTable<'a>,
+    ) -> Result<Vec<Argument<'a>>, ParseError> {
         let mut result = vec![];
         let mut scopes = 1;
-
         while *position < tokens.len() {
             let token = &tokens[*position];
             if *token == Token::EndParenthesis && scopes == 1 {
@@ -534,11 +553,21 @@ impl<'a> Parser<'a> {
             if *token == Token::StartParenthesis {
                 scopes += 1;
             }
-            result.push(Argument::from(token.clone()));
+
+            result.push(token.clone());
             *position += 1;
         }
+        let mut data: Vec<Argument<'a>> = vec![];
+        for res in result.split(|x| *x.to_string() == Token::Separator(',').to_string()) {
+            let mut parser = Parser::internal_new(
+                res.to_vec(),
+                Rc::new(RefCell::new(variables.clone())),
+                Rc::new(RefCell::new(functions.clone())),
+            );
+            data.push(Argument::from(parser.parse()?[0].clone()));
+        }
 
-        result
+        Ok(data)
     }
 }
 

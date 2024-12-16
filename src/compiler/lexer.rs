@@ -186,6 +186,7 @@ impl<'a> Lexer<'a> {
                     self.content.next();
                     result.push(Token::EndBracket);
                 }
+
                 '{' => {
                     self.content.next();
                     result.push(Token::StartBrace);
@@ -275,7 +276,7 @@ impl<'a> Lexer<'a> {
 
         while let Some(char) = self.content.peek() {
             match *char {
-                '0'..='9' | '.' | ',' => {
+                '0'..='9' | '.' => {
                     id.push(*char);
                     self.content.next();
                 }
