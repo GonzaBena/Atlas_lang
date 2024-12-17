@@ -1,5 +1,3 @@
-use crate::types::basic::number::int32::Int32;
-
 use super::token::Token;
 
 /// Represents all possible operators in the language, including:
@@ -136,17 +134,17 @@ impl Operator {
 
             Self::Pow | Self::PowAssign => match (left, right) {
                 (Token::Int32(num1), Token::Int32(num2)) => {
-                    let mut result = num1;
+                    let mut result = *num1;
 
                     if *num2 <= 1 {
-                        return Token::Int32(result);
+                        return Token::Int32(num1);
                     }
 
                     for _ in 2..=*num2 {
-                        result *= num1;
-                        println!("Result: {result:?}");
+                        result = result.checked_mul(*num1).unwrap_or_else(|| i32::MAX);
                     }
-                    return Token::Int32(result);
+
+                    return Token::Int32(result.into());
                 }
                 _ => Token::EOF,
             },
@@ -154,7 +152,7 @@ impl Operator {
             Self::Div | Self::DivAssign => {
                 return match (left, right) {
                     (Token::Int32(num1), Token::Int32(num2)) => {
-                        Token::to_number(num1 / num2, "Int32")
+                        Token::to_number(num1 / num2, "Double")
                     }
                     (Token::Double(num1), Token::Double(num2)) => {
                         Token::to_number(num1 / num2, "Double")
@@ -172,7 +170,7 @@ impl Operator {
             Self::DivInt | Self::DivIntAssign => {
                 return match (left, right) {
                     (Token::Int32(num1), Token::Int32(num2)) => {
-                        Token::Int32((num1 as Int32 / num2 as Int32).trunc())
+                        Token::Int32((num1 / num2).ceil().into())
                     }
                     _ => Token::EOF,
                 };

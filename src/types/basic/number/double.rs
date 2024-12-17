@@ -2,12 +2,14 @@ use std::fmt;
 use std::ops::{Add, AddAssign, Deref, DerefMut, Div, Mul, Rem, Sub};
 
 use super::int32::Int32;
+use serde::Serialize;
 
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+#[derive(Debug, Serialize, Clone, Copy, PartialEq, PartialOrd)]
 pub struct Double {
     data: f64,
 }
 
+#[allow(dead_code)]
 impl Double {
     pub fn new(num: f64) -> Self {
         Self { data: num }

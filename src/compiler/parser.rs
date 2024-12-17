@@ -10,7 +10,7 @@ use super::{
     variable::Variable,
     variable_table::VariableTable,
 };
-use std::{cell::RefCell, rc::Rc, str::FromStr};
+use std::{cell::RefCell, rc::Rc};
 
 /// This struct is in charge of manage the logic and semantic
 #[derive(Debug, Clone)]
@@ -86,9 +86,10 @@ impl<'a> Parser<'a> {
 
     pub fn parse(&mut self) -> Result<Vec<Token<'a>>, ParseError> {
         let mut results = Vec::new();
-
         while self.position < self.tokens.len() {
             let token = self.tokens[self.position].clone();
+            println!("\n\nTokens: {:?}", token);
+            println!("\n\nTokens: {:?}", self.variables.borrow().variables);
             match token {
                 Token::Keyword(Keyword::Var) => {
                     self.assignment()?;
@@ -282,21 +283,39 @@ impl<'a> Parser<'a> {
         }
 
         // Esperamos un identificador
-        let identifier = match self.tokens.get(self.position) {
+        let mut identifier = match self.tokens.get(self.position) {
             Some(Token::Identifier(name)) => {
                 self.position += 1; // Consume el identificador
                 name.to_owned()
             }
             _ => {
-                // Si no hay identificador, no podemos seguir
-                return Ok(());
+                if new_var {
+                    return Err(ParseError::SyntaxError(
+                        "Expected an identifier before assignment operator".into(),
+                    ));
+                } else {
+                    ""
+                }
             }
+        };
+        // if the next character is a :, so it's followed by a type
+        let var_type = if let Some(Token::Separator(':')) = self.tokens.get(self.position) {
+            self.position += 1;
+            if let Some(Token::Type(tipo)) = self.tokens.get(self.position) {
+                self.position += 1;
+                tipo.clone()
+            } else {
+                Types::Inferred
+            }
+        } else {
+            Types::Inferred
         };
 
         // Obtenemos el operador de asignación: puede ser '=' o '+='
         let operator = match self.tokens.get(self.position) {
             Some(Token::Operator(op)) => {
                 self.position += 1; // Consume '='
+
                 op.clone()
             }
             // Si no hay operador de asignación válido, retornamos sin error.
@@ -306,14 +325,27 @@ impl<'a> Parser<'a> {
             }
         };
 
+        if operator.is_assignation() {
+            identifier = match self.tokens.get(self.position - 2) {
+                Some(Token::Identifier(name)) => name.to_owned(),
+                _ => {
+                    // Si no hay identificador, no podemos seguir
+                    return Err(ParseError::SyntaxError(
+                        "Expected an identifier before assignment operator".into(),
+                    ));
+                }
+            };
+        }
+
         // Resolvemos la expresión del lado derecho
         let value_token = self.resolve()?;
+
         if operator.is_assignation() {
             // Reasignación con suma: x += valor
             let mut variable: Variable;
             let mut table = self.variables.borrow_mut();
+
             if let Ok(var) = table.get(&identifier) {
-                // Ejecutamos la operación sumando al valor actual
                 match value_token {
                     Token::Operation(mut expr) => {
                         let value = expr.resolve()?;
@@ -349,21 +381,48 @@ impl<'a> Parser<'a> {
         }
 
         let variable: Variable;
-
         match value_token {
             Token::Operation(mut expr) => {
                 let value = expr.resolve().unwrap();
                 if value == Token::Void {
                     return Err(ParseError::SyntaxError("error".into()));
                 }
-                let var_type = Types::from_str(&value.to_string())?;
-                variable = Variable::new(identifier.to_string(), var_type, value.clone(), 0);
+                let new_var_type = if var_type != Types::Inferred {
+                    var_type.clone()
+                } else {
+                    if var_type != Types::from(&value) {
+                        return Err(ParseError::InvalidType(format!(
+                            "The type of assignated value is different to the type of var."
+                        )));
+                    } else {
+                        Types::from(&value)
+                    }
+                };
+
+                variable = Variable::new(identifier.to_string(), new_var_type, value.clone(), 0);
             }
             value => {
-                let var_type = Types::from_str(&value.to_string())?;
-                variable = Variable::new(identifier.to_string(), var_type, value.clone(), 0);
+                let new_var_type = if var_type != Types::Inferred {
+                    if !var_type.cmp(Types::from(&value)) {
+                        return Err(ParseError::InvalidType(format!(
+                            "The type of assignated value is different to the type of var."
+                        )));
+                    } else {
+                        var_type.clone()
+                    }
+                } else {
+                    if var_type != Types::from(&value) {
+                        return Err(ParseError::InvalidType(format!(
+                            "The type of assignated value is different to the type of var."
+                        )));
+                    } else {
+                        Types::from(&value)
+                    }
+                };
+                variable = Variable::new(identifier.to_string(), new_var_type, value.clone(), 0);
             }
         }
+
         self.variables
             .borrow_mut()
             .variables
@@ -476,6 +535,8 @@ impl<'a> Parser<'a> {
             Token::Identifier(var) => {
                 self.position += 1;
                 if let Some(Token::StartParenthesis) = &self.tokens.get(self.position) {
+                    println!("Start");
+                    println!("{:?}", self.tokens);
                     self.position += 1; // Avanza más allá del paréntesis inicial
                     let args = Parser::get_args(
                         &self.tokens,
@@ -508,6 +569,11 @@ impl<'a> Parser<'a> {
                         }
                     }
                 } else if let Ok(variable) = self.variables.borrow_mut().get(&var) {
+                    if let Some(Token::Operator(op)) = &self.tokens.get(self.position) {
+                        if op.is_assignation() {
+                            return Ok(Token::EOF);
+                        }
+                    }
                     return Ok(*variable.value.clone());
                 } else {
                     let msg = format!("The variable '{var}' doesn't exists.");
@@ -564,7 +630,9 @@ impl<'a> Parser<'a> {
                 Rc::new(RefCell::new(variables.clone())),
                 Rc::new(RefCell::new(functions.clone())),
             );
-            data.push(Argument::from(parser.parse()?[0].clone()));
+            let result = parser.parse();
+            println!("parser: {:?}", res);
+            data.push(Argument::from(result?[0].clone()));
         }
 
         Ok(data)

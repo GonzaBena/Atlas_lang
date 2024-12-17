@@ -5,6 +5,7 @@ pub enum LexicError {
     InvalidIdentifier(String),
     InvalidKeyword(String),
     InvalidNumber(String),
+    UnfinalizedString,
 }
 
 impl fmt::Display for LexicError {
@@ -13,7 +14,9 @@ impl fmt::Display for LexicError {
             Self::InvalidIdentifier(txt) => write!(f, "InvalidIdentifier: {txt}"),
             Self::InvalidKeyword(txt) => write!(f, "InvalidKeyword: {txt}"),
             Self::InvalidNumber(txt) => write!(f, "InvalidNumber: {txt}"),
-            // _ => write!(f, ""),
+            Self::UnfinalizedString => {
+                write!(f, "UnfinalizedStringError: You didn't finish the string.")
+            } // _ => write!(f, ""),
         }
     }
 }

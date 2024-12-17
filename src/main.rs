@@ -33,7 +33,7 @@ fn main() {
         let mut parser = parser::Parser::new(tokens, None, None);
         // println!("\n\nParser: {:?}", parser);
         let parse = parser.parse();
-        println!("Parse: {:?}", parse.unwrap());
+        println!("\n\nParser: {:?}", parse);
     }
 
     // println!("{:#?}", args)

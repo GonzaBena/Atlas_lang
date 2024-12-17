@@ -1,72 +1,76 @@
-use serde::Serialize;
 use std::fmt;
 use std::ops::{Add, AddAssign, Deref, DerefMut, Div, Mul, MulAssign, Rem, Sub};
 
 use super::double::Double;
-use super::int64::Int64;
+use super::int32::Int32;
+use serde::Serialize;
 
 #[derive(Debug, Serialize, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Int32 {
-    data: i32,
+pub struct Int64 {
+    data: i64,
 }
 
-#[allow(dead_code)]
-impl Int32 {
-    pub const MAX: Int32 = Int32 { data: i32::MAX };
-    pub const MIN: Int32 = Int32 { data: i32::MIN };
-
-    pub fn new(num: i32) -> Self {
+impl Int64 {
+    pub fn new(num: i64) -> Self {
         Self { data: num }
     }
 }
 
-impl Deref for Int32 {
-    type Target = i32;
+impl Deref for Int64 {
+    type Target = i64;
 
     fn deref(&self) -> &Self::Target {
         &self.data
     }
 }
 
-impl DerefMut for Int32 {
+impl DerefMut for Int64 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.data
     }
 }
 
-impl fmt::Display for Int32 {
+impl fmt::Display for Int64 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.data)
     }
 }
 
-impl From<i32> for Int32 {
-    fn from(value: i32) -> Self {
+impl From<i64> for Int64 {
+    fn from(value: i64) -> Self {
         Self { data: value }
     }
 }
 
-impl From<i64> for Int32 {
-    fn from(value: i64) -> Self {
-        Self { data: value as i32 }
+impl From<i32> for Int64 {
+    fn from(value: i32) -> Self {
+        Self { data: value as i64 }
     }
 }
 
-impl From<Int64> for Int32 {
-    fn from(value: Int64) -> Self {
+impl From<Int32> for Int64 {
+    fn from(value: Int32) -> Self {
         Self {
-            data: *value as i32,
+            data: *value as i64,
         }
     }
 }
 
-impl From<f64> for Int32 {
+impl From<f64> for Int64 {
     fn from(value: f64) -> Self {
-        Self { data: value as i32 }
+        Self { data: value as i64 }
     }
 }
 
-impl From<u32> for Int32 {
+impl From<Double> for Int64 {
+    fn from(value: Double) -> Self {
+        Self {
+            data: *value as i64,
+        }
+    }
+}
+
+impl From<u32> for Int64 {
     fn from(value: u32) -> Self {
         Self {
             data: value.to_string().parse().expect("Espected a u32"),
@@ -74,7 +78,7 @@ impl From<u32> for Int32 {
     }
 }
 
-impl Add for Int32 {
+impl Add for Int64 {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
@@ -83,7 +87,7 @@ impl Add for Int32 {
     }
 }
 
-impl Add<Double> for Int32 {
+impl Add<Double> for Int64 {
     type Output = Double;
 
     fn add(self, rhs: Double) -> Self::Output {
@@ -92,13 +96,22 @@ impl Add<Double> for Int32 {
     }
 }
 
-impl AddAssign for Int32 {
+impl Add<Int32> for Int64 {
+    type Output = Self;
+
+    fn add(self, rhs: Int32) -> Self::Output {
+        let result = *self + *rhs as i64;
+        Self::Output::new(result)
+    }
+}
+
+impl AddAssign for Int64 {
     fn add_assign(&mut self, rhs: Self) {
         self.data += *rhs;
     }
 }
 
-impl Sub for Int32 {
+impl Sub for Int64 {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
@@ -107,7 +120,7 @@ impl Sub for Int32 {
     }
 }
 
-impl Sub<Double> for Int32 {
+impl Sub<Double> for Int64 {
     type Output = Double;
 
     fn sub(self, rhs: Double) -> Self::Output {
@@ -116,7 +129,16 @@ impl Sub<Double> for Int32 {
     }
 }
 
-impl Mul for Int32 {
+impl Sub<Int32> for Int64 {
+    type Output = Self;
+
+    fn sub(self, rhs: Int32) -> Self::Output {
+        let result = *self - *rhs as i64;
+        Self::Output::new(result)
+    }
+}
+
+impl Mul for Int64 {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {
@@ -125,7 +147,7 @@ impl Mul for Int32 {
     }
 }
 
-impl Mul<Double> for Int32 {
+impl Mul<Double> for Int64 {
     type Output = Double;
 
     fn mul(self, rhs: Double) -> Self::Output {
@@ -134,13 +156,22 @@ impl Mul<Double> for Int32 {
     }
 }
 
-impl MulAssign for Int32 {
+impl Mul<Int32> for Int64 {
+    type Output = Self;
+
+    fn mul(self, rhs: Int32) -> Self::Output {
+        let result = *self * *rhs as i64;
+        Self::Output::new(result)
+    }
+}
+
+impl MulAssign for Int64 {
     fn mul_assign(&mut self, rhs: Self) {
         self.data *= rhs.data
     }
 }
 
-impl Div for Int32 {
+impl Div for Int64 {
     type Output = Double;
 
     fn div(self, rhs: Self) -> Self::Output {
@@ -149,7 +180,7 @@ impl Div for Int32 {
     }
 }
 
-impl Div<Double> for Int32 {
+impl Div<Double> for Int64 {
     type Output = Double;
 
     fn div(self, rhs: Double) -> Self::Output {
@@ -158,28 +189,32 @@ impl Div<Double> for Int32 {
     }
 }
 
-impl Rem for Int32 {
+impl Div<Int32> for Int64 {
+    type Output = Self;
+
+    fn div(self, rhs: Int32) -> Self::Output {
+        let result = *self / *rhs as i64;
+        Self::Output::new(result)
+    }
+}
+
+impl Rem for Int64 {
     type Output = Self;
     fn rem(self, rhs: Self) -> Self::Output {
         Self::Output::new(*self % *rhs)
     }
 }
 
-impl Rem<Double> for Int32 {
+impl Rem<Double> for Int64 {
     type Output = Self;
     fn rem(self, rhs: Double) -> Self::Output {
-        Self::Output::new(*self % *rhs as i32)
+        Self::Output::new(*self % *rhs as i64)
     }
 }
 
-impl PartialOrd<i32> for Int32 {
-    fn partial_cmp(&self, other: &i32) -> Option<std::cmp::Ordering> {
-        self.data.partial_cmp(other)
-    }
-}
-
-impl PartialEq<i32> for Int32 {
-    fn eq(&self, other: &i32) -> bool {
-        self.data == *other
+impl Rem<Int32> for Int64 {
+    type Output = Self;
+    fn rem(self, rhs: Int32) -> Self::Output {
+        Self::Output::new(*self % *rhs as i64)
     }
 }

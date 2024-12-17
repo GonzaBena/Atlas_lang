@@ -3,7 +3,7 @@ use std::fmt::{Debug, Display};
 use super::{keyword::Keyword, operation::Operation, operator::Operator};
 use crate::{
     compiler::{error::parse_error::ParseError, types::Types},
-    types::basic::number::{double::Double, int32::Int32},
+    types::basic::number::{double::Double, int32::Int32, int64::Int64, Number},
 };
 
 /// Represent each possible token which you can use.
@@ -21,10 +21,12 @@ pub enum Token<'a> {
 
     // Datatypes
     Int32(Int32),
+    Int64(Int64),
     Double(Double),
     String(String),
     Str(&'a str),
     Boolean(bool),
+    Number(Number),
     // Function(&'a str),
 
     // Others
@@ -46,13 +48,21 @@ impl Display for Token<'_> {
             Token::Identifier(id) => write!(f, "{}", String::from(*id)),
             Token::Keyword(keyword) => write!(f, "{}", String::from(keyword.to_string())),
             Token::Int32(num) => write!(f, "{num}"),
+            Token::Int64(num) => write!(f, "{num}"),
             Token::Double(num) => write!(f, "{num}"),
+            Token::Number(num) => write!(f, "{num}"),
             Token::NewLine => write!(f, "{}", String::from("\n")),
             Token::EOF => write!(f, "{}", String::from("EOF")),
             Token::Void => write!(f, "{}", String::from("Void")),
             Token::Operator(op) => write!(f, "{}", String::from(op.to_string())),
             Token::Separator(op) => write!(f, "{op}"),
-            Token::String(string) => write!(f, "\"{string}\""),
+            Token::String(string) => {
+                if string.len() <= 1 {
+                    write!(f, "{}", string.chars().next().unwrap_or_default())
+                } else {
+                    write!(f, "\"{string}\"")
+                }
+            }
             Token::Str(string) => write!(f, "\"{string}\""),
             _ => write!(f, "{}", String::from("funcion")),
         }
@@ -64,7 +74,9 @@ impl PartialEq for Token<'_> {
         match (self, other) {
             (Token::Boolean(b1), Token::Boolean(b2)) => b1 == b2,
             (Token::Int32(i1), Token::Int32(i2)) => i1 == i2,
+            (Token::Int64(i1), Token::Int64(i2)) => i1 == i2,
             (Token::Double(d1), Token::Double(d2)) => d1 == d2,
+            (Token::Number(d1), Token::Number(d2)) => d1 == d2,
             (Token::String(s1), Token::String(s2)) => s1 == s2,
             (Token::Str(s1), Token::Str(s2)) => s1 == s2,
             (Token::Identifier(id1), Token::Identifier(id2)) => id1 == id2,
@@ -98,6 +110,10 @@ impl<'a> Token<'a> {
         match num_type {
             "Int32" => match id.parse::<f32>() {
                 Ok(value) => Token::Int32(Int32::new(value as i32)),
+                Err(_) => Token::EOF, // Si no se puede parsear, devolvemos un Token::EOF
+            },
+            "Int64" => match id.parse::<f64>() {
+                Ok(value) => Token::Int64(Int64::new(value as i64)),
                 Err(_) => Token::EOF, // Si no se puede parsear, devolvemos un Token::EOF
             },
             "Double" => match id.parse::<f64>() {
@@ -139,6 +155,12 @@ impl From<String> for Token<'_> {
 impl From<i32> for Token<'_> {
     fn from(value: i32) -> Self {
         Token::Int32(value.into())
+    }
+}
+
+impl From<i64> for Token<'_> {
+    fn from(value: i64) -> Self {
+        Token::Int64(value.into())
     }
 }
 

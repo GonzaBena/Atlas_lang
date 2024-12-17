@@ -258,14 +258,30 @@ impl<'a> Lexer<'a> {
             if char == '"' {
                 break;
             }
-            id.push(char);
-        }
-
-        if id.trim() == "" {
-            return Err(LexicError::InvalidIdentifier(format!(
-                "the id '{}' is invalid",
-                id
-            )));
+            match char {
+                '\\' => match self.content.peek() {
+                    Some(ch) => {
+                        match ch {
+                            'r' => {
+                                self.content.next();
+                                id.push('\r');
+                                id.push('\n');
+                            }
+                            'n' => {
+                                self.content.next();
+                                id.push('\n')
+                            }
+                            't' => {
+                                self.content.next();
+                                id.push('\t')
+                            }
+                            _ => return Err(LexicError::UnfinalizedString),
+                        };
+                    }
+                    None => return Err(LexicError::UnfinalizedString),
+                },
+                _ => id.push(char),
+            };
         }
 
         Ok(id)

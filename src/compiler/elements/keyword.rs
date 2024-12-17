@@ -1,8 +1,10 @@
 use std::{fmt::Display, str::FromStr};
 
+use serde::Serialize;
+
 use crate::compiler::error::lexic_error::LexicError;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Serialize, Clone, PartialEq, Eq)]
 #[allow(dead_code)]
 pub enum Keyword {
     Var,
