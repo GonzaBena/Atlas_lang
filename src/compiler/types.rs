@@ -1,6 +1,8 @@
-use std::str::FromStr;
+use std::{fmt, str::FromStr};
 
 use serde::Serialize;
+
+use crate::types::basic::number::{double::Double, int32::Int32, int64::Int64, Number};
 
 use super::{elements::token::Token, error::parse_error::ParseError};
 
@@ -59,6 +61,185 @@ impl Types {
                 _ => false,
             },
             _ => false,
+        }
+    }
+
+    pub fn inferred<'a>(&self, value: &Token<'a>) -> Result<Self, ParseError> {
+        match value {
+            Token::Number(_) => Ok(Self::Number),
+            Token::Int32(_) => {
+                if *self == Self::Number {
+                    Ok(Self::Number)
+                } else {
+                    Ok(Self::Int32)
+                }
+            }
+            Token::Int64(_) => {
+                if *self == Self::Number {
+                    Ok(Self::Number)
+                } else {
+                    Ok(Self::Int64)
+                }
+            }
+            Token::Double(_) => {
+                if *self == Self::Number {
+                    Ok(Self::Number)
+                } else {
+                    Ok(Self::Double)
+                }
+            }
+            Token::String(_) => Ok(Self::String),
+            Token::Str(_) => Ok(Self::Str),
+            Token::Type(types) => Ok(types.clone()),
+            Token::Boolean(_) => Ok(Self::Boolean),
+            _ => Err(ParseError::InvalidType(format!(
+                "the type to '{:?}' doesn't exists.",
+                Self::from(value)
+            ))),
+        }
+    }
+
+    pub fn transform(value: Token, to: Self) -> Result<(Token, Self), ParseError> {
+        match (to, value) {
+            (Types::Int32, Token::Int32(int32)) => Ok((Token::Int32(int32.clone()), Types::Int32)),
+            (Types::Int32, Token::Int64(int64)) => {
+                Ok((Token::Int32((*int64).into()), Types::Int32))
+            }
+            (Types::Int32, Token::Double(double)) => {
+                Ok((Token::Int32(Int32::new(*double as i32)), Types::Int32))
+            }
+            (Types::Int32, Token::String(s)) => Ok((
+                Token::Int32(Int32::new(s.chars().map(|c| c as i32).sum::<i32>())),
+                Types::Int32,
+            )),
+            (Types::Int32, Token::Str(s)) => Ok((
+                Token::Int32(Int32::new(s.chars().map(|c| c as i32).sum::<i32>())),
+                Types::Int32,
+            )),
+            (Types::Int32, Token::Boolean(b)) => Ok((
+                Token::Int32(if b { Int32::new(1) } else { Int32::new(0) }),
+                Types::Int32,
+            )),
+            (Types::Int32, Token::Number(number)) => {
+                Ok((Token::Int32(number.as_int32()), Types::Int32))
+            }
+            (Types::Int32, Token::Void) => Ok((Token::Int32(Int32::new(0)), Types::Int32)),
+
+            (Types::Int64, Token::Int32(int32)) => {
+                Ok((Token::Int64((*int32 as i64).into()), Types::Int64))
+            }
+            (Types::Int64, Token::Int64(int64)) => Ok((Token::Int64(int64.clone()), Types::Int64)),
+            (Types::Int64, Token::Double(double)) => {
+                Ok((Token::Int64(Int64::new(*double as i64)), Types::Int64))
+            }
+            (Types::Int64, Token::String(s)) => Ok((
+                Token::Int64(Int64::new(s.chars().map(|c| c as i64).sum::<i64>())),
+                Types::Int64,
+            )),
+            (Types::Int64, Token::Str(s)) => Ok((
+                Token::Int64(Int64::new(s.chars().map(|c| c as i64).sum::<i64>())),
+                Types::Int64,
+            )),
+            (Types::Int64, Token::Boolean(b)) => Ok((
+                Token::Int64(if b { Int64::new(1) } else { Int64::new(0) }),
+                Types::Int64,
+            )),
+            (Types::Int64, Token::Number(number)) => {
+                Ok((Token::Int64(number.as_int64()), Types::Int64))
+            }
+            (Types::Int64, Token::Void) => Ok((Token::Int64(Int64::new(0)), Types::Int64)),
+
+            (Types::Double, Token::Int32(int32)) => {
+                Ok((Token::Double(Double::new(*int32 as f64)), Types::Double))
+            }
+            (Types::Double, Token::Int64(int64)) => {
+                Ok((Token::Double(Double::new(*int64 as f64)), Types::Double))
+            }
+            (Types::Double, Token::Double(double)) => {
+                Ok((Token::Double(double.clone()), Types::Double))
+            }
+            (Types::Double, Token::String(s)) => Ok((
+                Token::Double(Double::new(
+                    s.chars().map(|c| (c as i64) as f64).sum::<f64>(),
+                )),
+                Types::Double,
+            )),
+            (Types::Double, Token::Str(s)) => Ok((
+                Token::Double(Double::new(
+                    s.chars().map(|c| (c as i64) as f64).sum::<f64>(),
+                )),
+                Types::Double,
+            )),
+
+            (Types::Double, Token::Boolean(b)) => Ok((
+                Token::Double(if b {
+                    Double::new(1.0)
+                } else {
+                    Double::new(0.0)
+                }),
+                Types::Double,
+            )),
+
+            (Types::Double, Token::Number(number)) => {
+                Ok((Token::Double(number.as_double()), Types::Double))
+            }
+            (Types::Double, Token::Void) => Ok((Token::Double(Double::new(0.0)), Types::Double)),
+
+            (Types::Number, Token::Int32(int32)) => {
+                Ok((Token::Number(Number::new(*int32)), Types::Number))
+            }
+            (Types::Number, Token::Int64(int64)) => {
+                Ok((Token::Number(Number::new(int64)), Types::Number))
+            }
+            (Types::Number, Token::Double(double)) => {
+                Ok((Token::Number(Number::new(*double)), Types::Number))
+            }
+            (Types::Number, Token::String(s)) => Ok((
+                Token::Number(Number::new(s.chars().map(|c| c as i32).sum::<i32>())),
+                Types::Number,
+            )),
+            (Types::Number, Token::Str(s)) => Ok((
+                Token::Number(Number::new(s.chars().map(|c| c as i32).sum::<i32>())),
+                Types::Number,
+            )),
+            (Types::Number, Token::Boolean(b)) => Ok((
+                Token::Number(if b { Number::new(1) } else { Number::new(0) }),
+                Types::Number,
+            )),
+            (Types::Number, Token::Number(number)) => {
+                Ok((Token::Number(number.clone()), Types::Number))
+            }
+            (Types::Number, Token::Void) => Ok((Token::Number(Number::new(0)), Types::Number)),
+
+            (Types::String, v) => {
+                Ok((Token::String(v.clone().str_value().to_string()), Types::Str))
+            }
+            (Types::Str, v) => Ok((
+                Token::Str(Box::leak(v.str_value().to_string().into_boxed_str())),
+                Types::Str,
+            )),
+            (Types::Boolean, v) => Ok((Token::Boolean(v.as_bool()), Types::Boolean)),
+            (Types::Void, _) => Ok((Token::Void, Types::Void)),
+            (Types::Function, v) => Ok((v.clone(), Types::Function)),
+            (Types::Inferred, v) => Ok((v.clone(), Self::from(v.clone()))),
+            _ => Err(ParseError::InvalidTypeConvertion(format!(""))),
+        }
+    }
+}
+
+impl fmt::Display for Types {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Types::Int32 => write!(f, "Int32"),
+            Types::Int64 => write!(f, "Int64"),
+            Types::Double => write!(f, "Double"),
+            Types::Number => write!(f, "Number"),
+            Types::String => write!(f, "String"),
+            Types::Str => write!(f, "Str"),
+            Types::Boolean => write!(f, "Boolean"),
+            Types::Void => write!(f, "Void"),
+            Types::Function => write!(f, "Function"),
+            Types::Inferred => write!(f, "Inferred"),
         }
     }
 }

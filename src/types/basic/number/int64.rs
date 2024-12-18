@@ -36,6 +36,12 @@ impl fmt::Display for Int64 {
     }
 }
 
+impl Into<f64> for Int64 {
+    fn into(self) -> f64 {
+        self.data as f64
+    }
+}
+
 impl From<i64> for Int64 {
     fn from(value: i64) -> Self {
         Self { data: value }
@@ -190,10 +196,10 @@ impl Div<Double> for Int64 {
 }
 
 impl Div<Int32> for Int64 {
-    type Output = Self;
+    type Output = Double;
 
     fn div(self, rhs: Int32) -> Self::Output {
-        let result = *self / *rhs as i64;
+        let result = *self as f64 / *rhs as f64;
         Self::Output::new(result)
     }
 }
@@ -216,5 +222,17 @@ impl Rem<Int32> for Int64 {
     type Output = Self;
     fn rem(self, rhs: Int32) -> Self::Output {
         Self::Output::new(*self % *rhs as i64)
+    }
+}
+
+impl PartialOrd<i64> for Int64 {
+    fn partial_cmp(&self, other: &i64) -> Option<std::cmp::Ordering> {
+        self.data.partial_cmp(other)
+    }
+}
+
+impl PartialEq<i64> for Int64 {
+    fn eq(&self, other: &i64) -> bool {
+        self.data == *other
     }
 }

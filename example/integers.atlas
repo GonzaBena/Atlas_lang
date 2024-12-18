@@ -1,6 +1,8 @@
 var hola: Number = 10
 
-
+dpprint(hola)
+hola //= 2
+dpprint(hola)
 
 
 

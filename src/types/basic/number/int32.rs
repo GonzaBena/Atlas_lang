@@ -40,6 +40,12 @@ impl fmt::Display for Int32 {
     }
 }
 
+impl Into<f64> for Int32 {
+    fn into(self) -> f64 {
+        self.data as f64
+    }
+}
+
 impl From<i32> for Int32 {
     fn from(value: i32) -> Self {
         Self { data: value }
@@ -74,6 +80,12 @@ impl From<u32> for Int32 {
     }
 }
 
+impl From<Double> for Int32 {
+    fn from(value: Double) -> Int32 {
+        Int32::new(*value as i32)
+    }
+}
+
 impl Add for Int32 {
     type Output = Self;
 
@@ -88,6 +100,15 @@ impl Add<Double> for Int32 {
 
     fn add(self, rhs: Double) -> Self::Output {
         let result = *self as f64 + *rhs;
+        Self::Output::new(result)
+    }
+}
+
+impl Add<Int64> for Int32 {
+    type Output = Int64;
+
+    fn add(self, rhs: Self::Output) -> Self::Output {
+        let result = *self as i64 + *rhs;
         Self::Output::new(result)
     }
 }
@@ -116,6 +137,15 @@ impl Sub<Double> for Int32 {
     }
 }
 
+impl Sub<Int64> for Int32 {
+    type Output = Int64;
+
+    fn sub(self, rhs: Int64) -> Self::Output {
+        let result = *self as i64 - *rhs;
+        Self::Output::new(result)
+    }
+}
+
 impl Mul for Int32 {
     type Output = Self;
 
@@ -130,6 +160,15 @@ impl Mul<Double> for Int32 {
 
     fn mul(self, rhs: Double) -> Self::Output {
         let result = *self as f64 * *rhs;
+        Self::Output::new(result)
+    }
+}
+
+impl Mul<Int64> for Int32 {
+    type Output = Int64;
+
+    fn mul(self, rhs: Int64) -> Self::Output {
+        let result = *self as i64 * *rhs;
         Self::Output::new(result)
     }
 }
@@ -158,6 +197,15 @@ impl Div<Double> for Int32 {
     }
 }
 
+impl Div<Int64> for Int32 {
+    type Output = Double;
+
+    fn div(self, rhs: Int64) -> Self::Output {
+        let result: f64 = *self as f64 / *rhs as f64;
+        Self::Output::new(result)
+    }
+}
+
 impl Rem for Int32 {
     type Output = Self;
     fn rem(self, rhs: Self) -> Self::Output {
@@ -168,6 +216,13 @@ impl Rem for Int32 {
 impl Rem<Double> for Int32 {
     type Output = Self;
     fn rem(self, rhs: Double) -> Self::Output {
+        Self::Output::new(*self % *rhs as i32)
+    }
+}
+
+impl Rem<Int64> for Int32 {
+    type Output = Self;
+    fn rem(self, rhs: Int64) -> Self::Output {
         Self::Output::new(*self % *rhs as i32)
     }
 }

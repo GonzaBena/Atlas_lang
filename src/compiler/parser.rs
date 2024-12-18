@@ -89,7 +89,7 @@ impl<'a> Parser<'a> {
         while self.position < self.tokens.len() {
             let token = self.tokens[self.position].clone();
             println!("\n\nTokens: {:?}", token);
-            println!("\n\nTokens: {:?}", self.variables.borrow().variables);
+            println!("Tokens: {:?}", self.variables.borrow().variables);
             match token {
                 Token::Keyword(Keyword::Var) => {
                     self.assignment()?;
@@ -359,6 +359,8 @@ impl<'a> Parser<'a> {
                     }
                     value => {
                         variable = var.clone();
+                        println!("Value: {variable:?}");
+
                         *variable.value = operator.execute(*var.value.clone(), value);
                     }
                 }
@@ -387,39 +389,16 @@ impl<'a> Parser<'a> {
                 if value == Token::Void {
                     return Err(ParseError::SyntaxError("error".into()));
                 }
-                let new_var_type = if var_type != Types::Inferred {
-                    var_type.clone()
-                } else {
-                    if var_type != Types::from(&value) {
-                        return Err(ParseError::InvalidType(format!(
-                            "The type of assignated value is different to the type of var."
-                        )));
-                    } else {
-                        Types::from(&value)
-                    }
-                };
-
-                variable = Variable::new(identifier.to_string(), new_var_type, value.clone(), 0);
+                let infered_type = Types::inferred(&var_type, &value)?;
+                let cloned: Token<'a> = value.clone();
+                let data = Types::transform(cloned, infered_type)?;
+                variable = Variable::new(identifier.to_string(), data.1, data.0, 0);
             }
             value => {
-                let new_var_type = if var_type != Types::Inferred {
-                    if !var_type.cmp(Types::from(&value)) {
-                        return Err(ParseError::InvalidType(format!(
-                            "The type of assignated value is different to the type of var."
-                        )));
-                    } else {
-                        var_type.clone()
-                    }
-                } else {
-                    if var_type != Types::from(&value) {
-                        return Err(ParseError::InvalidType(format!(
-                            "The type of assignated value is different to the type of var."
-                        )));
-                    } else {
-                        Types::from(&value)
-                    }
-                };
-                variable = Variable::new(identifier.to_string(), new_var_type, value.clone(), 0);
+                let infered_type = Types::inferred(&var_type, &value)?;
+                let cloned: Token<'a> = value.clone();
+                let data = Types::transform(cloned, infered_type)?;
+                variable = Variable::new(identifier.to_string(), data.1, data.0.clone(), 0);
             }
         }
 

@@ -12,6 +12,7 @@ pub enum ParseError {
     DefinedVariable(String),
     DefinedFunction(String),
     FunctionExecution(String),
+    InvalidTypeConvertion(String),
 }
 
 impl fmt::Display for ParseError {

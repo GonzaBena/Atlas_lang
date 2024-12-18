@@ -65,7 +65,7 @@ impl<'a> Lexer<'a> {
                 '0'..='9' | '.' => {
                     let number = self.cut_number();
                     match number {
-                        Ok(num) => result.push(Token::to_number(num, "")),
+                        Ok(num) => result.push(Token::to_number(num, Types::Void)),
                         Err(err) => panic!("{:?}", err),
                     }
                 }

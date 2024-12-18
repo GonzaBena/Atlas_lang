@@ -101,30 +101,30 @@ impl PartialEq for Token<'_> {
 
 #[allow(dead_code)]
 impl<'a> Token<'a> {
-    pub fn to_number<T>(num: T, num_type: &str) -> Token<'a>
+    pub fn to_number<T>(num: T, num_type: Types) -> Token<'a>
     where
         T: ToString,
     {
         let id: String = num.to_string();
 
         match num_type {
-            "Int32" => match id.parse::<f32>() {
+            Types::Int32 => match id.parse::<f32>() {
                 Ok(value) => Token::Int32(Int32::new(value as i32)),
                 Err(_) => Token::EOF, // Si no se puede parsear, devolvemos un Token::EOF
             },
-            "Int64" => match id.parse::<f64>() {
+            Types::Int64 => match id.parse::<f64>() {
                 Ok(value) => Token::Int64(Int64::new(value as i64)),
                 Err(_) => Token::EOF, // Si no se puede parsear, devolvemos un Token::EOF
             },
-            "Double" => match id.parse::<f64>() {
+            Types::Double => match id.parse::<f64>() {
                 Ok(value) => Token::Double(value.into()),
                 Err(_) => Token::EOF,
             },
             _ => {
                 return if id.contains('.') {
-                    Token::to_number(&id, "Double")
+                    Token::to_number(&id, Types::Double)
                 } else {
-                    Token::to_number(&id, "Int32")
+                    Token::to_number(&id, Types::Int32)
                 };
             } // Tipo no soportado
         }
@@ -134,6 +134,55 @@ impl<'a> Token<'a> {
         match self {
             Token::Operation(mut operation) => operation.resolve(),
             v => Ok(v),
+        }
+    }
+
+    pub fn as_bool(&self) -> bool {
+        match self {
+            Token::Identifier(_) | Token::Keyword(_) => true,
+            Token::Int32(int32) => *int32 > 0,
+            Token::Int64(int64) => *int64 > 0,
+            Token::Double(double) => *double > 0.0,
+            Token::String(s) => s.is_empty(),
+            Token::Str(s) => s.is_empty(),
+            Token::Boolean(b) => *b,
+            Token::Number(number) => *number > 0,
+            _ => false,
+        }
+    }
+
+    pub fn str_value(&self) -> &str {
+        match self {
+            Token::Identifier(v) => *v,
+            Token::Keyword(keyword) => Box::leak(keyword.to_string().into_boxed_str()),
+            Token::Operation(operation) => {
+                Box::leak((operation.operator).to_string().into_boxed_str())
+            }
+            Token::Operator(operator) => Box::leak(operator.to_string().into_boxed_str()),
+            Token::Type(types) => Box::leak((*types).to_string().into_boxed_str()),
+            Token::Int32(int32) => Box::leak(int32.to_string().into_boxed_str()),
+            Token::Int64(int64) => Box::leak(int64.to_string().into_boxed_str()),
+            Token::Double(double) => Box::leak(double.to_string().into_boxed_str()),
+            Token::String(s) => s,
+            Token::Str(s) => s,
+            Token::Boolean(v) => {
+                if *v {
+                    "true"
+                } else {
+                    "false"
+                }
+            }
+            Token::Number(number) => Box::leak(number.to_string().into_boxed_str()),
+            Token::StartParenthesis => "(",
+            Token::EndParenthesis => ")",
+            Token::StartBracket => "[",
+            Token::EndBracket => "]",
+            Token::StartBrace => "{",
+            Token::EndBrace => "}",
+            Token::Separator(c) => Box::leak(c.to_string().into_boxed_str()),
+            Token::NewLine => "\\n",
+            Token::EOF => "EOF",
+            Token::Void => "Void",
         }
     }
 
