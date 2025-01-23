@@ -15,22 +15,22 @@ use std::{cell::RefCell, rc::Rc};
 /// This struct is in charge of manage the logic and semantic
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
-pub struct Parser<'a> {
+pub struct Parser {
     /// List of tokens to parse
-    tokens: Vec<Token<'a>>,
+    tokens: Vec<Token>,
     position: usize,
-    variables: Rc<RefCell<VariableTable<'a>>>,
-    functions: Rc<RefCell<FunctionTable<'a>>>,
+    variables: Rc<RefCell<VariableTable>>,
+    functions: Rc<RefCell<FunctionTable>>,
 }
 
 #[allow(dead_code)]
-impl<'a> Parser<'a> {
+impl Parser {
     pub fn new(
-        tokens: Vec<Token<'a>>,
-        variables: Option<Rc<RefCell<VariableTable<'a>>>>,
-        functions: Option<Rc<RefCell<FunctionTable<'a>>>>,
+        tokens: Vec<Token>,
+        variables: Option<Rc<RefCell<VariableTable>>>,
+        functions: Option<Rc<RefCell<FunctionTable>>>,
     ) -> Self {
-        let tokens: Vec<Token<'a>> = tokens
+        let tokens: Vec<Token> = tokens
             .iter()
             .filter(|x| **x != Token::EOF)
             .map(|x| x.to_owned())
@@ -44,9 +44,9 @@ impl<'a> Parser<'a> {
     }
 
     fn internal_new(
-        tokens: Vec<Token<'a>>,
-        variables: Rc<RefCell<VariableTable<'a>>>,
-        functions: Rc<RefCell<FunctionTable<'a>>>,
+        tokens: Vec<Token>,
+        variables: Rc<RefCell<VariableTable>>,
+        functions: Rc<RefCell<FunctionTable>>,
     ) -> Self {
         Parser {
             tokens,
@@ -56,7 +56,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn get_variables(&self) -> Vec<(String, Variable<'a>)> {
+    pub fn get_variables(&self) -> Vec<(String, Variable)> {
         let mut result = vec![];
 
         for (key, variable) in self.variables.borrow().variables.iter() {
@@ -66,15 +66,15 @@ impl<'a> Parser<'a> {
         result
     }
 
-    pub fn get_variable_table(&self) -> VariableTable<'a> {
+    pub fn get_variable_table(&self) -> VariableTable {
         (*self.variables.borrow()).clone()
     }
 
-    pub fn get_function_table(&self) -> FunctionTable<'a> {
+    pub fn get_function_table(&self) -> FunctionTable {
         (*self.functions.borrow()).clone()
     }
 
-    pub fn get_functions(&self) -> Vec<(String, Function<'a>)> {
+    pub fn get_functions(&self) -> Vec<(String, Function)> {
         let mut result = vec![];
 
         for (key, variable) in self.functions.borrow().functions.iter() {
@@ -84,12 +84,10 @@ impl<'a> Parser<'a> {
         result
     }
 
-    pub fn parse(&mut self) -> Result<Vec<Token<'a>>, ParseError> {
+    pub fn parse(&mut self) -> Result<Vec<Token>, ParseError> {
         let mut results = Vec::new();
         while self.position < self.tokens.len() {
             let token = self.tokens[self.position].clone();
-            println!("\n\nTokens: {:?}", token);
-            println!("Tokens: {:?}", self.variables.borrow().variables);
             match token {
                 Token::Keyword(Keyword::Var) => {
                     self.assignment()?;
@@ -168,16 +166,16 @@ impl<'a> Parser<'a> {
             self.position += 1;
         }
 
-        let mut arg_array: Vec<Argument<'a>> = vec![];
+        let mut arg_array: Vec<Argument> = vec![];
         for x in arguments
             .split(|x| *x == Token::Separator(','))
             .map(|x| x.to_owned())
-            .collect::<Vec<Vec<Token<'a>>>>()
+            .collect::<Vec<Vec<Token>>>()
             .iter()
         {
             if let [name_slice, var_type_slice] = x
                 .split(|x| *x == Token::Separator(':'))
-                .collect::<Vec<&[Token<'a>]>>()
+                .collect::<Vec<&[Token]>>()
                 .as_slice()
             {
                 // Procesa los elementos de forma segura
@@ -233,7 +231,12 @@ impl<'a> Parser<'a> {
                             panic!("Invalid type of atribbute");
                         };
 
-                        arg_array.push(Argument::new(name, var_type, Some(Box::new(value)), None));
+                        arg_array.push(Argument::new(
+                            name.clone(),
+                            var_type,
+                            Some(Box::new(value)),
+                            None,
+                        ));
                     } else {
                         return Err(ParseError::SyntaxError("Invalid argument type".into()));
                     }
@@ -256,19 +259,19 @@ impl<'a> Parser<'a> {
                         panic!("Invalid type of atribbute");
                     };
 
-                    arg_array.push(Argument::new(name, var_type, None, None));
+                    arg_array.push(Argument::new(name.clone(), var_type, None, None));
                 }
             } else {
                 return Err(ParseError::SyntaxError("Invalid argument format".into()));
             }
         }
         let mut table = self.functions.borrow_mut();
-        if let Ok(_) = table.get(identifier) {
-            return Err(ParseError::DefinedFunction(identifier.into()));
+        if let Ok(_) = table.get(identifier.as_ref()) {
+            return Err(ParseError::DefinedFunction(identifier.to_string()));
         } else {
             table.insert(
-                identifier,
-                Function::new(identifier, Types::Void, arg_array, content, 0),
+                identifier.as_ref(),
+                Function::new(identifier.clone(), Types::Void, arg_array, content, 0),
             )?;
         }
         return Ok(());
@@ -294,13 +297,14 @@ impl<'a> Parser<'a> {
                         "Expected an identifier before assignment operator".into(),
                     ));
                 } else {
-                    ""
+                    "".into()
                 }
             }
         };
         // if the next character is a :, so it's followed by a type
         let var_type = if let Some(Token::Separator(':')) = self.tokens.get(self.position) {
             self.position += 1;
+
             if let Some(Token::Type(tipo)) = self.tokens.get(self.position) {
                 self.position += 1;
                 tipo.clone()
@@ -343,7 +347,7 @@ impl<'a> Parser<'a> {
 
         if operator.is_assignation() {
             // Reasignación con suma: x += valor
-            let variable;
+            let mut variable;
 
             if let Ok(var) = table.get_mut(&identifier) {
                 match value_token {
@@ -363,10 +367,10 @@ impl<'a> Parser<'a> {
                         if var_type == var.var_type {
                             var.value = Box::new(result);
                         } else {
-                            let value = var.to_token().to(var_type)?;
-                            (*var).value = Box::new(value);
+                            (*var).value = Box::new(result);
                             var.var_type = var_type;
                         }
+                        variable = var.clone();
                     }
                 }
             } else if new_var {
@@ -383,7 +387,7 @@ impl<'a> Parser<'a> {
                     identifier
                 )));
             }
-            let _ = table.update(identifier, &mut variable);
+            let _ = table.update(identifier.as_ref(), &mut variable);
             return Ok(());
         }
 
@@ -391,31 +395,42 @@ impl<'a> Parser<'a> {
         match value_token {
             Token::Operation(mut expr) => {
                 let value = expr.resolve().unwrap();
+
                 if value == Token::Void {
                     return Err(ParseError::SyntaxError("error".into()));
                 }
                 let infered_type = Types::inferred(&value)?;
-                let cloned: Token<'a> = value.clone();
-                let data = Types::transform(cloned, infered_type)?;
+                let cloned: Token = value.clone();
+                let data = Types::transform(
+                    cloned,
+                    if var_type != Types::Inferred {
+                        var_type
+                    } else {
+                        infered_type
+                    },
+                )?;
                 variable = Variable::new(identifier.to_string(), data.1, data.0, 0);
             }
             value => {
                 let infered_type = Types::inferred(&value)?;
-                let cloned: Token<'a> = value.clone();
-                let data = Types::transform(cloned, infered_type)?;
+                let cloned: Token = value.clone();
+                let data = Types::transform(
+                    cloned,
+                    if var_type != Types::Inferred {
+                        var_type
+                    } else {
+                        infered_type
+                    },
+                )?;
                 variable = Variable::new(identifier.to_string(), data.1, data.0.clone(), 0);
             }
         }
-
-        self.variables
-            .borrow_mut()
-            .variables
-            .insert(identifier.to_string(), variable);
+        table.variables.insert(identifier.to_string(), variable);
 
         Ok(())
     }
 
-    fn resolve(&mut self) -> Result<Token<'a>, ParseError> {
+    fn resolve(&mut self) -> Result<Token, ParseError> {
         let mut node = self.term()?;
 
         while self.position < self.tokens.len() {
@@ -434,7 +449,7 @@ impl<'a> Parser<'a> {
         Ok(node)
     }
 
-    fn term(&mut self) -> Result<Token<'a>, ParseError> {
+    fn term(&mut self) -> Result<Token, ParseError> {
         let mut node = self.factor()?;
 
         while self.position < self.tokens.len() {
@@ -461,7 +476,7 @@ impl<'a> Parser<'a> {
         Ok(node)
     }
 
-    fn factor(&mut self) -> Result<Token<'a>, ParseError> {
+    fn factor(&mut self) -> Result<Token, ParseError> {
         if self.position >= self.tokens.len() {
             return Ok(Token::Void);
         }
@@ -518,8 +533,6 @@ impl<'a> Parser<'a> {
             Token::Identifier(var) => {
                 self.position += 1;
                 if let Some(Token::StartParenthesis) = &self.tokens.get(self.position) {
-                    println!("Start");
-                    println!("{:?}", self.tokens);
                     self.position += 1; // Avanza más allá del paréntesis inicial
                     let args = Parser::get_args(
                         &self.tokens,
@@ -586,11 +599,11 @@ impl<'a> Parser<'a> {
 
     /// For any transformation you want to make to the arguments, you must change the body of this function.
     fn get_args(
-        tokens: &[Token<'a>],
+        tokens: &[Token],
         position: &mut usize,
-        variables: VariableTable<'a>,
-        functions: FunctionTable<'a>,
-    ) -> Result<Vec<Argument<'a>>, ParseError> {
+        variables: VariableTable,
+        functions: FunctionTable,
+    ) -> Result<Vec<Argument>, ParseError> {
         let mut result = vec![];
         let mut scopes = 1;
         while *position < tokens.len() {
@@ -606,7 +619,7 @@ impl<'a> Parser<'a> {
             result.push(token.clone());
             *position += 1;
         }
-        let mut data: Vec<Argument<'a>> = vec![];
+        let mut data: Vec<Argument> = vec![];
         for res in result.split(|x| *x.to_string() == Token::Separator(',').to_string()) {
             let mut parser = Parser::internal_new(
                 res.to_vec(),
@@ -614,7 +627,6 @@ impl<'a> Parser<'a> {
                 Rc::new(RefCell::new(functions.clone())),
             );
             let result = parser.parse();
-            println!("parser: {:?}", res);
             data.push(Argument::from(result?[0].clone()));
         }
 
@@ -622,7 +634,7 @@ impl<'a> Parser<'a> {
     }
 }
 
-impl<'a> PartialEq for Parser<'a> {
+impl PartialEq for Parser {
     fn eq(&self, other: &Self) -> bool {
         self.tokens == other.tokens
     }
@@ -652,7 +664,7 @@ mod parser_test {
     fn parse_test() {
         let mut lex: Lexer<'static> = Lexer::new("var hola = 10\n");
         let tokens = lex.lex();
-        let mut parser: Parser<'_> = Parser::new(tokens, None, None);
+        let mut parser: Parser = Parser::new(tokens, None, None);
         let parse = parser.parse().unwrap();
 
         assert_eq!(parse, vec![])

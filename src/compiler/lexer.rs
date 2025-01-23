@@ -7,6 +7,7 @@ use crate::compiler::elements::token::Token;
 use std::{
     iter::Peekable,
     str::{Chars, FromStr},
+    sync::Arc,
 };
 
 /// Convert both character or set of caracter in a Tokend
@@ -31,7 +32,7 @@ impl<'a> Lexer<'a> {
 
     /// Transform each character in a Token
     pub fn lex(&mut self) -> Vec<Token> {
-        let mut result: Vec<Token<'a>> = vec![];
+        let mut result: Vec<Token> = vec![];
         while let Some(char) = self.content.peek() {
             match char {
                 // Words
@@ -39,9 +40,10 @@ impl<'a> Lexer<'a> {
                     let id = self.cut_identifier();
                     match id {
                         Ok(id) => match id.type_id {
-                            IdentifierType::Id => result.push(Token::Identifier(Box::leak(
-                                id.value.unwrap().into_boxed_str(),
-                            ))),
+                            IdentifierType::Id => {
+                                result.push(Token::Identifier(Arc::from(id.value.unwrap())))
+                            }
+
                             IdentifierType::Keyword => {
                                 result.push(Token::Keyword(id.keyword.unwrap()))
                             }
@@ -344,7 +346,7 @@ mod lexer_test {
             lex.lex(),
             vec![
                 Token::Keyword(Keyword::Var),
-                Token::Identifier("hola"),
+                Token::Identifier(Arc::from("hola")),
                 Token::Operator(Operator::Assign),
                 Token::Int32(10.into()),
                 Token::NewLine,

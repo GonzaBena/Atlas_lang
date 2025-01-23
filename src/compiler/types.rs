@@ -45,7 +45,6 @@ impl Types {
         T: Into<Types>,
     {
         let other = other.into();
-        println!("self: {self:?}, other: {other:?}");
         if self.is_numeric() && other.is_numeric() {
             return true;
         }
@@ -63,7 +62,7 @@ impl Types {
         }
     }
 
-    pub fn inferred<'a>(value: &Token<'a>) -> Result<Self, ParseError> {
+    pub fn inferred<'a>(value: &Token) -> Result<Self, ParseError> {
         match value {
             Token::Int32(_) => Ok(Self::Int32),
             Token::Int64(_) => Ok(Self::Int64),
@@ -159,10 +158,7 @@ impl Types {
             (Types::String, v) => {
                 Ok((Token::String(v.clone().str_value().to_string()), Types::Str))
             }
-            (Types::Str, v) => Ok((
-                Token::Str(Box::leak(v.str_value().to_string().into_boxed_str())),
-                Types::Str,
-            )),
+            (Types::Str, v) => Ok((Token::Str(v.str_value().into()), Types::Str)),
             (Types::Boolean, v) => Ok((Token::Boolean(v.as_bool()), Types::Boolean)),
             (Types::Void, _) => Ok((Token::Void, Types::Void)),
             (Types::Function, v) => Ok((v.clone(), Types::Function)),
@@ -205,8 +201,8 @@ impl FromStr for Types {
     }
 }
 
-impl From<&Token<'_>> for Types {
-    fn from(value: &Token<'_>) -> Self {
+impl From<&Token> for Types {
+    fn from(value: &Token) -> Self {
         match value {
             Token::Boolean(_) => Self::Boolean,
             Token::Int32(_) => Self::Int32,
@@ -221,8 +217,8 @@ impl From<&Token<'_>> for Types {
     }
 }
 
-impl From<Token<'_>> for Types {
-    fn from(value: Token<'_>) -> Self {
+impl From<Token> for Types {
+    fn from(value: Token) -> Self {
         match value {
             Token::Boolean(_) => Self::Boolean,
             Token::Int32(_) => Self::Int32,

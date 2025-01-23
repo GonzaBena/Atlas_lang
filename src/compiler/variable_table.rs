@@ -3,19 +3,19 @@ use std::collections::HashMap;
 use super::{error::parse_error::ParseError, variable::Variable};
 
 #[derive(Debug, Clone)]
-pub struct VariableTable<'a> {
-    pub(crate) variables: HashMap<String, Variable<'a>>,
+pub struct VariableTable {
+    pub(crate) variables: HashMap<String, Variable>,
 }
 
 #[allow(dead_code)]
-impl<'a> VariableTable<'a> {
+impl VariableTable {
     pub fn new() -> Self {
         VariableTable {
             variables: HashMap::new(),
         }
     }
 
-    pub fn get(&self, key: &str) -> Result<&Variable<'a>, ParseError> {
+    pub fn get(&self, key: &str) -> Result<&Variable, ParseError> {
         if let Some(var) = self.variables.get(key) {
             Ok(var)
         } else {
@@ -25,7 +25,7 @@ impl<'a> VariableTable<'a> {
         }
     }
 
-    pub fn get_mut(&mut self, key: &str) -> Result<&mut Variable<'a>, ParseError> {
+    pub fn get_mut(&mut self, key: &str) -> Result<&mut Variable, ParseError> {
         if let Some(var) = self.variables.get_mut(key) {
             Ok(var)
         } else {
@@ -35,7 +35,7 @@ impl<'a> VariableTable<'a> {
         }
     }
 
-    pub fn insert(&mut self, key: &str, value: Variable<'a>) -> Result<(), ParseError> {
+    pub fn insert(&mut self, key: &str, value: Variable) -> Result<(), ParseError> {
         if !self.variables.contains_key(key) {
             self.variables.insert(key.to_string(), value);
             Ok(())
@@ -51,11 +51,7 @@ impl<'a> VariableTable<'a> {
         }
     }
 
-    pub fn update(
-        &mut self,
-        key: &str,
-        value: &mut Variable<'a>,
-    ) -> Result<Variable<'a>, ParseError> {
+    pub fn update(&mut self, key: &str, value: &mut Variable) -> Result<Variable, ParseError> {
         if let Some(mut var) = self.variables.get_mut(key) {
             let aux = var.clone();
             var = value;
@@ -68,7 +64,7 @@ impl<'a> VariableTable<'a> {
         }
     }
 
-    fn delete_one(&mut self, key: &str) -> Result<Variable<'a>, ParseError> {
+    fn delete_one(&mut self, key: &str) -> Result<Variable, ParseError> {
         if let Some(var) = self.variables.remove(key) {
             Ok(var)
         } else {
@@ -78,8 +74,8 @@ impl<'a> VariableTable<'a> {
         }
     }
 
-    pub fn delete(&mut self, keys: Vec<&str>) -> (Vec<Variable<'a>>, Vec<String>) {
-        let mut result: Vec<Variable<'a>> = vec![];
+    pub fn delete(&mut self, keys: Vec<&str>) -> (Vec<Variable>, Vec<String>) {
+        let mut result: Vec<Variable> = vec![];
         let mut not_deleted: Vec<String> = vec![];
         if keys.len() > 1 {
             for key in keys {

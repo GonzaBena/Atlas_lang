@@ -11,7 +11,6 @@ pub fn io_functions() -> HashMap<String, StdFunc> {
     functions.insert(
         "print".to_string(),
         StdFunc::new("print".to_string(), |args| {
-            // println!("args: {args:?}");
             let mut txt = String::new();
             for arg in args {
                 txt.push_str(&format!(
@@ -27,7 +26,7 @@ pub fn io_functions() -> HashMap<String, StdFunc> {
                     }
                 ));
             }
-            println!("{}", txt.trim());
+            println!("{txt}");
             Ok(Token::Void)
         }),
     );
@@ -35,7 +34,6 @@ pub fn io_functions() -> HashMap<String, StdFunc> {
     functions.insert(
         "dprint".to_string(),
         StdFunc::new("dprint".to_string(), |args| {
-            // println!("args: {args:?}");
             let mut txt = String::new();
             let len = args.len();
             for arg in args {
@@ -51,7 +49,7 @@ pub fn io_functions() -> HashMap<String, StdFunc> {
                     txt.push_str(" ");
                 }
             }
-            println!("{}", txt.trim());
+            println!("{txt}");
             Ok(Token::Void)
         }),
     );
@@ -86,8 +84,8 @@ pub fn io_functions() -> HashMap<String, StdFunc> {
                             result.push(c);
                             count += 1;
                         }
-
-                        result.chars().rev().collect() // Revertimos el resultado final
+                        let txt: String = result.chars().rev().collect(); // Revertimos el resultado final
+                        txt.blue().to_string()
                     };
 
                     match value {
@@ -110,7 +108,7 @@ pub fn io_functions() -> HashMap<String, StdFunc> {
                     txt.push_str(" ");
                 }
             }
-            println!("{}", txt.trim());
+            println!("{txt}");
             Ok(Token::Void)
         }),
     );

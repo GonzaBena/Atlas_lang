@@ -83,7 +83,7 @@ impl ToString for Operator {
 
 #[allow(dead_code)]
 impl Operator {
-    pub fn execute<'a>(&self, left: Token<'a>, right: Token<'a>) -> Token<'a> {
+    pub fn execute<'a>(&self, left: Token, right: Token) -> Token {
         let mut left = left;
         let mut right = right;
         if let Token::Operation(mut op) = left {
@@ -92,6 +92,7 @@ impl Operator {
         if let Token::Operation(mut op) = right {
             right = op.resolve().unwrap();
         }
+
         match self {
             Self::Add | Self::AddAssign => match (left, right) {
                 (Token::Int32(num1), Token::Int32(num2)) => {

@@ -1,4 +1,4 @@
-use std::{cell::RefCell, fmt::Debug, rc::Rc, str::FromStr};
+use std::{cell::RefCell, fmt::Debug, rc::Rc, str::FromStr, sync::Arc};
 
 use crate::compiler::error::parse_error::ParseError;
 
@@ -9,17 +9,17 @@ use super::{
 
 #[derive(Debug, PartialEq, Clone)]
 #[allow(dead_code)]
-pub struct Argument<'a> {
-    pub(crate) name: &'a str,
+pub struct Argument {
+    pub(crate) name: Arc<str>,
     pub(crate) var_type: Types,
-    pub(crate) default_value: Option<Box<Token<'a>>>,
-    pub(crate) value: Option<Box<Token<'a>>>,
+    pub(crate) default_value: Option<Box<Token>>,
+    pub(crate) value: Option<Box<Token>>,
 }
 
-impl<'a> From<Token<'a>> for Argument<'a> {
-    fn from(value: Token<'a>) -> Self {
+impl<'a> From<Token> for Argument {
+    fn from(value: Token) -> Self {
         Self {
-            name: "",
+            name: "".into(),
             var_type: Types::from(&value),
             default_value: Some(Box::new(value.clone())),
             value: Some(Box::new(value)),
@@ -27,12 +27,12 @@ impl<'a> From<Token<'a>> for Argument<'a> {
     }
 }
 
-impl<'a> Argument<'a> {
+impl Argument {
     pub fn new(
-        name: &'a str,
+        name: Arc<str>,
         var_type: Types,
-        default_value: Option<Box<Token<'a>>>,
-        value: Option<Box<Token<'a>>>,
+        default_value: Option<Box<Token>>,
+        value: Option<Box<Token>>,
     ) -> Self {
         Self {
             name,
@@ -42,7 +42,7 @@ impl<'a> Argument<'a> {
         }
     }
 
-    pub fn as_var(&self, scope: usize) -> Variable<'a> {
+    pub fn as_var(&self, scope: usize) -> Variable {
         Variable::new(
             self.name.to_string(),
             self.var_type.clone(),
@@ -57,22 +57,22 @@ impl<'a> Argument<'a> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Function<'a> {
-    name: &'a str,
+pub struct Function {
+    name: Arc<str>,
     return_type: Types,
-    args: Vec<Argument<'a>>,
-    content: Vec<Token<'a>>,
+    args: Vec<Argument>,
+    content: Vec<Token>,
     scope: usize,
-    predefined: Option<&'a str>, // Usa un identificador único (nombre)
+    predefined: Option<Arc<str>>, // Usa un identificador único (nombre)
 }
 
 #[allow(dead_code)]
-impl<'a> Function<'a> {
+impl Function {
     pub fn new(
-        name: &'a str,
+        name: Arc<str>,
         return_type: Types,
-        args: Vec<Argument<'a>>,
-        content: Vec<Token<'a>>,
+        args: Vec<Argument>,
+        content: Vec<Token>,
         scope: usize,
     ) -> Self {
         Self {
@@ -85,9 +85,9 @@ impl<'a> Function<'a> {
         }
     }
 
-    pub fn new_predefined(name: &'a str, return_type: Types) -> Self {
+    pub fn new_predefined(name: Arc<str>, return_type: Types) -> Self {
         Self {
-            name,
+            name: name.clone(),
             return_type,
             args: vec![], // Las funciones predefinidas no necesitan argumentos explícitos
             content: vec![], // Tampoco necesitan un cuerpo
@@ -110,10 +110,10 @@ impl<'a> Function<'a> {
 
     pub fn call(
         &self,
-        arguments: Vec<Argument<'a>>,
-        variables: Rc<RefCell<VariableTable<'a>>>,
-        functions: Rc<RefCell<FunctionTable<'a>>>,
-    ) -> Result<Token<'a>, FunctionError> {
+        arguments: Vec<Argument>,
+        variables: Rc<RefCell<VariableTable>>,
+        functions: Rc<RefCell<FunctionTable>>,
+    ) -> Result<Token, FunctionError> {
         if arguments.len() > self.args.len() {
             return Err(FunctionError::InvalidNumberOfArgs(format!(
                 "The function accept only {} arguments",
@@ -126,11 +126,11 @@ impl<'a> Function<'a> {
                 self.args.len()
             )));
         }
-        let mut args_to_variables: Vec<Variable<'a>> = vec![];
+        let mut args_to_variables: Vec<Variable> = vec![];
         for var in &self.args {
             args_to_variables.push(var.as_var(self.scope));
         }
-        let mut var_table: VariableTable<'a> = (*variables.borrow_mut()).clone();
+        let mut var_table: VariableTable = (*variables.borrow_mut()).clone();
         for arg in args_to_variables.iter_mut() {
             if let Ok(var) = variables.borrow().get(&arg.name) {
                 let _ = var_table.update(&var.name, arg);
@@ -139,12 +139,12 @@ impl<'a> Function<'a> {
             }
         }
 
-        let mut parser: Parser<'a> = Parser::new(
+        let mut parser: Parser = Parser::new(
             self.content.clone(),
             Some(Rc::new(RefCell::new(var_table))),
             Some(functions),
         );
-        let parse: Result<Vec<Token<'a>>, ParseError> = parser.parse();
+        let parse: Result<Vec<Token>, ParseError> = parser.parse();
         if parse.is_err() {
             return Err(FunctionError::ExecutionError(format!("r")));
         }

@@ -39,7 +39,7 @@ impl StdFunc {
         }
     }
 
-    pub fn call<'a>(&self, args: Vec<Argument<'a>>) -> Result<Token<'a>, String> {
+    pub fn call(&self, args: Vec<Argument>) -> Result<Token, String> {
         (self.execute)(args)
     }
 }

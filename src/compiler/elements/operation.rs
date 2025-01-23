@@ -4,10 +4,10 @@ use super::{operator::Operator, token::Token};
 
 #[derive(Debug, Clone, PartialEq)]
 #[allow(dead_code)]
-pub struct Operation<'a> {
+pub struct Operation {
     pub(crate) operator: Operator,
-    pub(crate) left: Box<Token<'a>>,
-    pub(crate) right: Box<Token<'a>>,
+    pub(crate) left: Box<Token>,
+    pub(crate) right: Box<Token>,
 }
 
 // impl PartialEq for Operation<'_> {
@@ -17,7 +17,7 @@ pub struct Operation<'a> {
 // }
 
 #[allow(dead_code)]
-impl<'a> Operation<'a> {
+impl Operation {
     /// Create a new Operation
     ///
     /// # Example
@@ -28,7 +28,7 @@ impl<'a> Operation<'a> {
     ///
     /// let operation = Operation::new(operator, left, right);
     /// ```
-    pub fn new(operator: Operator, left: Token<'a>, right: Token<'a>) -> Operation<'a> {
+    pub fn new(operator: Operator, left: Token, right: Token) -> Operation {
         Operation {
             operator,
             left: Box::new(left),
@@ -36,9 +36,10 @@ impl<'a> Operation<'a> {
         }
     }
 
-    pub fn resolve(&mut self) -> Result<Token<'a>, ParseError> {
+    pub fn resolve(&mut self) -> Result<Token, ParseError> {
         let left = self.left.clone().resolve()?;
         let right = self.right.clone().resolve()?;
-        Ok(self.operator.execute(left, right))
+        let result = self.operator.execute(left, right);
+        Ok(result)
     }
 }
