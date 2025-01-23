@@ -1,3 +1,4 @@
+use num::ToPrimitive;
 use serde::Serialize;
 use std::fmt;
 use std::ops::{Add, AddAssign, Deref, DerefMut, Div, Mul, MulAssign, Rem, Sub};
@@ -8,6 +9,16 @@ use super::int64::Int64;
 #[derive(Debug, Serialize, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Int32 {
     data: i32,
+}
+
+impl ToPrimitive for Int32 {
+    fn to_i64(&self) -> Option<i64> {
+        Some(self.data as i64)
+    }
+
+    fn to_u64(&self) -> Option<u64> {
+        Some(self.data as u64)
+    }
 }
 
 #[allow(dead_code)]

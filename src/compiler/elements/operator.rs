@@ -110,9 +110,6 @@ impl Operator {
                 (Token::Int32(int32), Token::Int64(int64)) => {
                     Token::to_number(int32 + int64, Types::Int64)
                 }
-                (Token::Int32(int32), Token::Number(number)) => {
-                    Token::to_number(int32 + number.as_int32(), Types::Int64)
-                }
 
                 // MARK: ------ Int64 ------
                 (Token::Int64(int64), Token::Int32(int32)) => {
@@ -124,31 +121,12 @@ impl Operator {
                 (Token::Int64(int64), Token::Double(double)) => {
                     Token::to_number(int64 + double, Types::Double)
                 }
-                (Token::Int64(int64), Token::Number(number)) => {
-                    Token::to_number(int64 + number.as_int64(), Types::Int64)
-                }
 
                 // MARK: ------ Double ------
                 (Token::Double(double), Token::Int64(int64)) => {
                     Token::to_number(double + int64, Types::Int64)
                 }
-                (Token::Double(double), Token::Number(number)) => {
-                    Token::to_number(double + number.as_double(), Types::Int64)
-                }
 
-                // MARK: ------ Number ------
-                (Token::Number(number), Token::Int32(int32)) => {
-                    Token::to_number(number.as_int32() + int32, Types::Int64)
-                }
-                (Token::Number(number), Token::Int64(int64)) => {
-                    Token::to_number(number.as_int64() + int64, Types::Int64)
-                }
-                (Token::Number(number), Token::Double(double)) => {
-                    Token::to_number(number.as_double() + double, Types::Int64)
-                }
-                (Token::Number(number), Token::Number(number2)) => {
-                    Token::to_number(number + number2, Types::Int64)
-                }
                 _ => Token::EOF,
             },
 
@@ -231,9 +209,6 @@ impl Operator {
                     (Token::Int32(num1), Token::Double(num2)) => {
                         Token::Int32((num1 / num2).ceil().into())
                     }
-                    (Token::Int32(num1), Token::Number(num2)) => {
-                        Token::Int32((num1 / num2.as_int32()).ceil().into())
-                    }
 
                     // MARK: ------ Int64 ------
                     (Token::Int64(num1), Token::Int32(num2)) => {
@@ -244,9 +219,6 @@ impl Operator {
                     }
                     (Token::Int64(num1), Token::Double(num2)) => {
                         Token::Int32((num1 / num2).ceil().into())
-                    }
-                    (Token::Int64(num1), Token::Number(num2)) => {
-                        Token::Int32((num1 / num2.as_int64()).ceil().into())
                     }
 
                     // MARK: ------ Double ------
@@ -259,23 +231,7 @@ impl Operator {
                     (Token::Double(num1), Token::Double(num2)) => {
                         Token::Int32((num1 / num2).ceil().into())
                     }
-                    (Token::Double(num1), Token::Number(num2)) => {
-                        Token::Int32((num1 / num2.as_double()).ceil().into())
-                    }
 
-                    // MARK: ------ Number ------
-                    (Token::Number(num1), Token::Int32(num2)) => {
-                        Token::Int32((num1.as_int32() / num2).ceil().into())
-                    }
-                    (Token::Number(num1), Token::Int64(num2)) => {
-                        Token::Int32((num1.as_int64() / num2).ceil().into())
-                    }
-                    (Token::Number(num1), Token::Double(num2)) => {
-                        Token::Int32((num1.as_double() / num2).ceil().into())
-                    }
-                    (Token::Number(num1), Token::Number(num2)) => {
-                        Token::Int32((num1.as_int32() / num2.as_int32()).ceil().into())
-                    }
                     _ => Token::EOF,
                 }
             }

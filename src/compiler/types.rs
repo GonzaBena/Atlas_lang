@@ -2,17 +2,16 @@ use std::{fmt, str::FromStr};
 
 use serde::Serialize;
 
-use crate::types::basic::number::{double::Double, int32::Int32, int64::Int64, Number};
+use crate::types::basic::number::{double::Double, int32::Int32, int64::Int64};
 
 use super::{elements::token::Token, error::parse_error::ParseError};
 
-#[derive(Debug, Serialize, PartialEq, Clone)]
+#[derive(Debug, Serialize, PartialEq, Clone, Copy)]
 #[allow(dead_code)]
 pub enum Types {
     Int32,
     Int64,
     Double,
-    Number,
     String,
     Str,
     Boolean,
@@ -25,7 +24,7 @@ pub enum Types {
 impl Types {
     pub fn is_integer(&self) -> bool {
         match self {
-            Self::Int32 | Self::Int64 | Self::Number => true,
+            Self::Int32 | Self::Int64 => true,
             _ => false,
         }
     }
@@ -64,30 +63,11 @@ impl Types {
         }
     }
 
-    pub fn inferred<'a>(&self, value: &Token<'a>) -> Result<Self, ParseError> {
+    pub fn inferred<'a>(value: &Token<'a>) -> Result<Self, ParseError> {
         match value {
-            Token::Number(_) => Ok(Self::Number),
-            Token::Int32(_) => {
-                if *self == Self::Number {
-                    Ok(Self::Number)
-                } else {
-                    Ok(Self::Int32)
-                }
-            }
-            Token::Int64(_) => {
-                if *self == Self::Number {
-                    Ok(Self::Number)
-                } else {
-                    Ok(Self::Int64)
-                }
-            }
-            Token::Double(_) => {
-                if *self == Self::Number {
-                    Ok(Self::Number)
-                } else {
-                    Ok(Self::Double)
-                }
-            }
+            Token::Int32(_) => Ok(Self::Int32),
+            Token::Int64(_) => Ok(Self::Int64),
+            Token::Double(_) => Ok(Self::Double),
             Token::String(_) => Ok(Self::String),
             Token::Str(_) => Ok(Self::Str),
             Token::Type(types) => Ok(types.clone()),
@@ -120,9 +100,6 @@ impl Types {
                 Token::Int32(if b { Int32::new(1) } else { Int32::new(0) }),
                 Types::Int32,
             )),
-            (Types::Int32, Token::Number(number)) => {
-                Ok((Token::Int32(number.as_int32()), Types::Int32))
-            }
             (Types::Int32, Token::Void) => Ok((Token::Int32(Int32::new(0)), Types::Int32)),
 
             (Types::Int64, Token::Int32(int32)) => {
@@ -144,9 +121,6 @@ impl Types {
                 Token::Int64(if b { Int64::new(1) } else { Int64::new(0) }),
                 Types::Int64,
             )),
-            (Types::Int64, Token::Number(number)) => {
-                Ok((Token::Int64(number.as_int64()), Types::Int64))
-            }
             (Types::Int64, Token::Void) => Ok((Token::Int64(Int64::new(0)), Types::Int64)),
 
             (Types::Double, Token::Int32(int32)) => {
@@ -180,36 +154,7 @@ impl Types {
                 Types::Double,
             )),
 
-            (Types::Double, Token::Number(number)) => {
-                Ok((Token::Double(number.as_double()), Types::Double))
-            }
             (Types::Double, Token::Void) => Ok((Token::Double(Double::new(0.0)), Types::Double)),
-
-            (Types::Number, Token::Int32(int32)) => {
-                Ok((Token::Number(Number::new(*int32)), Types::Number))
-            }
-            (Types::Number, Token::Int64(int64)) => {
-                Ok((Token::Number(Number::new(int64)), Types::Number))
-            }
-            (Types::Number, Token::Double(double)) => {
-                Ok((Token::Number(Number::new(*double)), Types::Number))
-            }
-            (Types::Number, Token::String(s)) => Ok((
-                Token::Number(Number::new(s.chars().map(|c| c as i32).sum::<i32>())),
-                Types::Number,
-            )),
-            (Types::Number, Token::Str(s)) => Ok((
-                Token::Number(Number::new(s.chars().map(|c| c as i32).sum::<i32>())),
-                Types::Number,
-            )),
-            (Types::Number, Token::Boolean(b)) => Ok((
-                Token::Number(if b { Number::new(1) } else { Number::new(0) }),
-                Types::Number,
-            )),
-            (Types::Number, Token::Number(number)) => {
-                Ok((Token::Number(number.clone()), Types::Number))
-            }
-            (Types::Number, Token::Void) => Ok((Token::Number(Number::new(0)), Types::Number)),
 
             (Types::String, v) => {
                 Ok((Token::String(v.clone().str_value().to_string()), Types::Str))
@@ -233,7 +178,6 @@ impl fmt::Display for Types {
             Types::Int32 => write!(f, "Int32"),
             Types::Int64 => write!(f, "Int64"),
             Types::Double => write!(f, "Double"),
-            Types::Number => write!(f, "Number"),
             Types::String => write!(f, "String"),
             Types::Str => write!(f, "Str"),
             Types::Boolean => write!(f, "Boolean"),
@@ -252,7 +196,6 @@ impl FromStr for Types {
             "Int32" => Ok(Self::Int32),
             "Int64" => Ok(Self::Int64),
             "Double" => Ok(Self::Double),
-            "Number" => Ok(Self::Number),
             "String" => Ok(Self::String),
             "Str" => Ok(Self::Str),
             "Void" => Ok(Self::Void),
@@ -269,7 +212,6 @@ impl From<&Token<'_>> for Types {
             Token::Int32(_) => Self::Int32,
             Token::Int64(_) => Self::Int64,
             Token::Double(_) => Self::Double,
-            Token::Number(num) => num.as_type(),
             Token::String(_) => Self::String,
             Token::Str(_) => Self::Str,
             Token::Void => Self::Void,

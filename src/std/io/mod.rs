@@ -94,7 +94,6 @@ pub fn io_functions() -> HashMap<String, StdFunc> {
                         Token::Int32(num) => txt.push_str(&divide(num.to_string(), false)),
                         Token::Int64(num) => txt.push_str(&divide(num.to_string(), false)),
                         Token::Double(num) => txt.push_str(&divide(num.to_string(), true)),
-                        Token::Number(num) => txt.push_str(&divide(num.to_string(), false)),
                         _ => (),
                     }
                 } else {

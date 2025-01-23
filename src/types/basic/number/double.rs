@@ -3,6 +3,7 @@ use std::ops::{Add, AddAssign, Deref, DerefMut, Div, Mul, Rem, Sub};
 
 use super::int32::Int32;
 use super::int64::Int64;
+use num::ToPrimitive;
 use serde::Serialize;
 
 #[derive(Debug, Serialize, Clone, Copy, PartialEq, PartialOrd)]
@@ -10,6 +11,7 @@ pub struct Double {
     data: f64,
 }
 
+#[allow(dead_code)]
 impl Double {
     pub fn new(num: f64) -> Self {
         Self { data: num }
@@ -46,17 +48,19 @@ impl Into<f64> for Double {
     }
 }
 
-impl From<f64> for Double {
-    fn from(value: f64) -> Self {
-        Self { data: value }
-    }
-}
+// impl From<f64> for Double {
+//     fn from(value: f64) -> Self {
+//         Self { data: value }
+//     }
+// }
 
-impl From<Int32> for Double {
-    fn from(value: Int32) -> Self {
-        Self {
-            data: *value as f64,
-        }
+impl<T> From<T> for Double
+where
+    T: ToPrimitive,
+{
+    fn from(value: T) -> Self {
+        let val: f64 = T::to_f64(&value).unwrap();
+        Self { data: val }
     }
 }
 

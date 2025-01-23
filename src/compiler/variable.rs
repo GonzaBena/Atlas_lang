@@ -3,9 +3,9 @@ use super::{elements::token::Token, types::Types};
 #[derive(Debug, PartialEq, Clone)]
 pub struct Variable<'a> {
     pub(crate) name: String,
-    var_type: Types,
+    pub(crate) var_type: Types,
     pub(crate) value: Box<Token<'a>>,
-    scope: usize,
+    pub(crate) scope: usize,
 }
 
 #[allow(dead_code)]

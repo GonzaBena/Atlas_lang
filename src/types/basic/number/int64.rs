@@ -3,6 +3,7 @@ use std::ops::{Add, AddAssign, Deref, DerefMut, Div, Mul, MulAssign, Rem, Sub};
 
 use super::double::Double;
 use super::int32::Int32;
+use num::ToPrimitive;
 use serde::Serialize;
 
 #[derive(Debug, Serialize, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -42,47 +43,57 @@ impl Into<f64> for Int64 {
     }
 }
 
-impl From<i64> for Int64 {
-    fn from(value: i64) -> Self {
-        Self { data: value }
+impl<T> From<T> for Int64
+where
+    T: ToPrimitive,
+{
+    fn from(value: T) -> Self {
+        let val = T::to_i64(&value).unwrap();
+        Self { data: val }
     }
 }
 
-impl From<i32> for Int64 {
-    fn from(value: i32) -> Self {
-        Self { data: value as i64 }
-    }
-}
+// impl From<i64> for Int64 {
+//     fn from(value: i64) -> Self {
+//         Self { data: value }
+//     }
+// }
 
-impl From<Int32> for Int64 {
-    fn from(value: Int32) -> Self {
-        Self {
-            data: *value as i64,
-        }
-    }
-}
+// impl From<i32> for Int64 {
+//     fn from(value: i32) -> Self {
+//         Self { data: value as i64 }
+//     }
+// }
 
-impl From<f64> for Int64 {
-    fn from(value: f64) -> Self {
-        Self { data: value as i64 }
-    }
-}
+// impl From<Int32> for Int64 {
+//     fn from(value: Int32) -> Self {
+//         Self {
+//             data: *value as i64,
+//         }
+//     }
+// }
 
-impl From<Double> for Int64 {
-    fn from(value: Double) -> Self {
-        Self {
-            data: *value as i64,
-        }
-    }
-}
+// impl From<f64> for Int64 {
+//     fn from(value: f64) -> Self {
+//         Self { data: value as i64 }
+//     }
+// }
 
-impl From<u32> for Int64 {
-    fn from(value: u32) -> Self {
-        Self {
-            data: value.to_string().parse().expect("Espected a u32"),
-        }
-    }
-}
+// impl From<Double> for Int64 {
+//     fn from(value: Double) -> Self {
+//         Self {
+//             data: *value as i64,
+//         }
+//     }
+// }
+
+// impl From<u32> for Int64 {
+//     fn from(value: u32) -> Self {
+//         Self {
+//             data: value.to_string().parse().expect("Espected a u32"),
+//         }
+//     }
+// }
 
 impl Add for Int64 {
     type Output = Self;

@@ -339,13 +339,13 @@ impl<'a> Parser<'a> {
 
         // Resolvemos la expresión del lado derecho
         let value_token = self.resolve()?;
+        let mut table = self.variables.borrow_mut();
 
         if operator.is_assignation() {
             // Reasignación con suma: x += valor
-            let mut variable: Variable;
-            let mut table = self.variables.borrow_mut();
+            let variable;
 
-            if let Ok(var) = table.get(&identifier) {
+            if let Ok(var) = table.get_mut(&identifier) {
                 match value_token {
                     Token::Operation(mut expr) => {
                         let value = expr.resolve()?;
@@ -354,14 +354,19 @@ impl<'a> Parser<'a> {
                                 "Se esperaba un valor distinto a Void".into(),
                             ));
                         }
+                        var.value = Box::new(operator.execute(*var.value.clone(), value));
                         variable = var.clone();
-                        *variable.value = operator.execute(*var.value.clone(), value);
                     }
                     value => {
-                        variable = var.clone();
-                        println!("Value: {variable:?}");
-
-                        *variable.value = operator.execute(*var.value.clone(), value);
+                        let result = operator.execute(*var.value.clone(), value);
+                        let var_type = Types::inferred(&result)?;
+                        if var_type == var.var_type {
+                            var.value = Box::new(result);
+                        } else {
+                            let value = var.to_token().to(var_type)?;
+                            (*var).value = Box::new(value);
+                            var.var_type = var_type;
+                        }
                     }
                 }
             } else if new_var {
@@ -389,13 +394,13 @@ impl<'a> Parser<'a> {
                 if value == Token::Void {
                     return Err(ParseError::SyntaxError("error".into()));
                 }
-                let infered_type = Types::inferred(&var_type, &value)?;
+                let infered_type = Types::inferred(&value)?;
                 let cloned: Token<'a> = value.clone();
                 let data = Types::transform(cloned, infered_type)?;
                 variable = Variable::new(identifier.to_string(), data.1, data.0, 0);
             }
             value => {
-                let infered_type = Types::inferred(&var_type, &value)?;
+                let infered_type = Types::inferred(&value)?;
                 let cloned: Token<'a> = value.clone();
                 let data = Types::transform(cloned, infered_type)?;
                 variable = Variable::new(identifier.to_string(), data.1, data.0.clone(), 0);
@@ -494,9 +499,8 @@ impl<'a> Parser<'a> {
                 self.position += 1; // Consume the keyword
                 match k {
                     Keyword::Var => {
-                        // let result = self.parse_assignment(table)?;
-                        // Ok(result)
-                        todo!()
+                        self.assignment()?;
+                        Ok(Token::EOF)
                     }
                     Keyword::True => Ok(Token::Boolean(true)),
                     Keyword::False => Ok(Token::Boolean(false)),

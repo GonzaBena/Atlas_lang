@@ -3,7 +3,7 @@ use std::fmt::{Debug, Display};
 use super::{keyword::Keyword, operation::Operation, operator::Operator};
 use crate::{
     compiler::{error::parse_error::ParseError, types::Types},
-    types::basic::number::{double::Double, int32::Int32, int64::Int64, Number},
+    types::basic::number::{double::Double, int32::Int32, int64::Int64},
 };
 
 /// Represent each possible token which you can use.
@@ -26,7 +26,6 @@ pub enum Token<'a> {
     String(String),
     Str(&'a str),
     Boolean(bool),
-    Number(Number),
     // Function(&'a str),
 
     // Others
@@ -50,7 +49,6 @@ impl Display for Token<'_> {
             Token::Int32(num) => write!(f, "{num}"),
             Token::Int64(num) => write!(f, "{num}"),
             Token::Double(num) => write!(f, "{num}"),
-            Token::Number(num) => write!(f, "{num}"),
             Token::NewLine => write!(f, "{}", String::from("\n")),
             Token::EOF => write!(f, "{}", String::from("EOF")),
             Token::Void => write!(f, "{}", String::from("Void")),
@@ -76,7 +74,6 @@ impl PartialEq for Token<'_> {
             (Token::Int32(i1), Token::Int32(i2)) => i1 == i2,
             (Token::Int64(i1), Token::Int64(i2)) => i1 == i2,
             (Token::Double(d1), Token::Double(d2)) => d1 == d2,
-            (Token::Number(d1), Token::Number(d2)) => d1 == d2,
             (Token::String(s1), Token::String(s2)) => s1 == s2,
             (Token::Str(s1), Token::Str(s2)) => s1 == s2,
             (Token::Identifier(id1), Token::Identifier(id2)) => id1 == id2,
@@ -100,6 +97,7 @@ impl PartialEq for Token<'_> {
 }
 
 #[allow(dead_code)]
+#[allow(unused_variables)]
 impl<'a> Token<'a> {
     pub fn to_number<T>(num: T, num_type: Types) -> Token<'a>
     where
@@ -137,6 +135,126 @@ impl<'a> Token<'a> {
         }
     }
 
+    pub fn to(&self, new_type: Types) -> Result<Token<'a>, ParseError> {
+        match (self, &new_type) {
+            (Token::Int32(int32), Types::Int32) => Ok(Token::Int32(*int32)),
+            (Token::Int32(int32), Types::Int64) => Ok(Token::Int64(<Int64>::from(*int32))),
+            (Token::Int32(int32), Types::Double) => Ok(Token::Double(<Double>::from(*int32))),
+            (Token::Int32(int32), Types::String) => Ok(Token::String(int32.to_string())),
+            (Token::Int32(int32), Types::Str) => {
+                Ok(Token::Str(Box::leak(int32.to_string().into_boxed_str())))
+            }
+            (Token::Int32(int32), Types::Boolean) => Ok(Token::Boolean(*int32 != 0)),
+
+            (Token::Int64(int64), Types::Int32) => todo!(),
+            (Token::Int64(int64), Types::Int64) => Ok(Token::Int64(*int64)),
+            (Token::Int64(int64), Types::Double) => todo!(),
+            (Token::Int64(int64), Types::String) => todo!(),
+            (Token::Int64(int64), Types::Str) => {
+                Ok(Token::Str(Box::leak(int64.to_string().into_boxed_str())))
+            }
+            (Token::Int64(int64), Types::Boolean) => Ok(Token::Boolean(*int64 != 0)),
+
+            (Token::Double(double), Types::Int32) => todo!(),
+            (Token::Double(double), Types::Int64) => todo!(),
+            (Token::Double(double), Types::Double) => Ok(Token::Double(*double)),
+            (Token::Double(double), Types::String) => todo!(),
+            (Token::Double(double), Types::Str) => {
+                Ok(Token::Str(Box::leak(double.to_string().into_boxed_str())))
+            }
+            (Token::Double(double), Types::Boolean) => Ok(Token::Boolean(*double != 0.0)),
+
+            (Token::String(string), Types::Int32) => todo!(),
+            (Token::String(string), Types::Int64) => todo!(),
+            (Token::String(string), Types::Double) => todo!(),
+            (Token::String(string), Types::String) => Ok(Token::String(string.to_string())),
+            (Token::String(string), Types::Str) => todo!(),
+            (Token::String(string), Types::Boolean) => Ok(Token::Boolean(string.is_empty())),
+
+            (Token::Str(string), Types::Int32) => {
+                if let Ok(value) = string.parse::<i32>() {
+                    Ok(Token::Int32(value.into()))
+                } else {
+                    Err(ParseError::InvalidTypeConvertion(format!(
+                        "You can't convert a '{}' into {}",
+                        string, new_type
+                    )))
+                }
+            }
+            (Token::Str(string), Types::Int64) => {
+                if let Ok(value) = string.parse::<i64>() {
+                    Ok(Token::Int64(value.into()))
+                } else {
+                    Err(ParseError::InvalidTypeConvertion(format!(
+                        "You can't convert a {} in {}",
+                        Types::inferred(self)?,
+                        new_type
+                    )))
+                }
+            }
+            (Token::Str(string), Types::Double) => {
+                if let Ok(value) = string.parse::<f64>() {
+                    Ok(Token::Double(value.into()))
+                } else {
+                    Err(ParseError::InvalidTypeConvertion(format!(
+                        "You can't convert a '{}' into {}",
+                        string, new_type
+                    )))
+                }
+            }
+            (Token::Str(string), Types::String) => Ok(Token::String(string.to_string())),
+            (Token::Str(string), Types::Str) => Ok(Token::Str(string)),
+            (Token::Str(string), Types::Boolean) => match string {
+                &"true" => Ok(Token::Boolean(true)),
+                &"false" => Ok(Token::Boolean(false)),
+                _ => Ok(Token::Boolean(string.is_empty())),
+            },
+
+            (Token::Boolean(bool), Types::Int32) => {
+                if *bool {
+                    Ok(Token::Int32(1.into()))
+                } else {
+                    Ok(Token::Int32(0.into()))
+                }
+            }
+            (Token::Boolean(bool), Types::Int64) => {
+                if *bool {
+                    Ok(Token::Int64(1.into()))
+                } else {
+                    Ok(Token::Int64(0.into()))
+                }
+            }
+            (Token::Boolean(bool), Types::Double) => {
+                if *bool {
+                    Ok(Token::Double((1.0).into()))
+                } else {
+                    Ok(Token::Double((0.0).into()))
+                }
+            }
+            (Token::Boolean(bool), Types::String) => {
+                if *bool {
+                    Ok(Token::String("true".to_string()))
+                } else {
+                    Ok(Token::String("false".to_string()))
+                }
+            }
+            (Token::Boolean(bool), Types::Str) => {
+                if *bool {
+                    Ok(Token::Str("true"))
+                } else {
+                    Ok(Token::Str("false"))
+                }
+            }
+            (Token::Boolean(bool), Types::Boolean) => Ok(Token::Boolean(*bool)),
+
+            _ => Err(ParseError::InvalidTypeConvertion(format!(
+                "You can't convert a {} in {}",
+                Types::inferred(self)?,
+                new_type
+            ))),
+        }
+    }
+
     pub fn as_bool(&self) -> bool {
         match self {
             Token::Identifier(_) | Token::Keyword(_) => true,
@@ -146,7 +264,6 @@ impl<'a> Token<'a> {
             Token::String(s) => s.is_empty(),
             Token::Str(s) => s.is_empty(),
             Token::Boolean(b) => *b,
-            Token::Number(number) => *number > 0,
             _ => false,
         }
     }
@@ -172,7 +289,6 @@ impl<'a> Token<'a> {
                     "false"
                 }
             }
-            Token::Number(number) => Box::leak(number.to_string().into_boxed_str()),
             Token::StartParenthesis => "(",
             Token::EndParenthesis => ")",
             Token::StartBracket => "[",
