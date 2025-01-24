@@ -2,11 +2,13 @@ mod cli;
 mod compiler;
 mod std;
 mod types;
+mod utils;
 
 use ::std::process;
 use atlas_lang::compiler::{lexer::Lexer, parser};
 use clap::Parser;
 use cli::Args;
+use utils::panic;
 
 fn main() {
     let args = Args::parse();
@@ -19,8 +21,8 @@ fn main() {
 
     let verify = args.verify();
 
-    if let Err(error) = verify {
-        panic!("{:?}", error);
+    if let Err(error) = &verify {
+        panic(&format!("{:?}", error));
     }
 
     let project = verify.unwrap();
@@ -28,12 +30,15 @@ fn main() {
     for file in project.files {
         let mut lex = Lexer::new(&file.content);
         let tokens = lex.lex();
-        // println!("Tokens: {:#?}", tokens);
+        // println!("Tokens: {:?}", tokens);
 
         let mut parser = parser::Parser::new(tokens, None, None);
         // println!("\n\nParser: {:?}", parser);
-        let _parse = parser.parse();
+        let parse = parser.parse();
         // println!("\n\nParser: {:?}", parse);
+        if parse.is_err() {
+            panic(&format!("{:?}", parse.unwrap_err()));
+        }
     }
 
     // println!("{:#?}", args)

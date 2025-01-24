@@ -1,5 +1,3 @@
-print("hola mundo")
-print(1)
-print( 10 + 10 )
-print(10.0)
-print(25.6)
+var hola: Int32 = 10
+
+typeof(int64)

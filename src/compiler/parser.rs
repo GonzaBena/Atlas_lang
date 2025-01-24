@@ -14,7 +14,6 @@ use std::{cell::RefCell, rc::Rc};
 
 /// This struct is in charge of manage the logic and semantic
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct Parser {
     /// List of tokens to parse
     tokens: Vec<Token>,
@@ -23,7 +22,6 @@ pub struct Parser {
     functions: Rc<RefCell<FunctionTable>>,
 }
 
-#[allow(dead_code)]
 impl Parser {
     pub fn new(
         tokens: Vec<Token>,
@@ -540,6 +538,11 @@ impl Parser {
                         self.variables.borrow().clone(),
                         self.functions.borrow().clone(),
                     );
+                    if args.is_err() {
+                        // let msg = format!("{:?}", args.clone().unwrap_err());
+                        // panic(&msg);
+                        return Err(args.clone().unwrap_err());
+                    }
                     let func = if let Ok(function) = self.functions.borrow().get(var) {
                         function
                     } else {
@@ -558,6 +561,7 @@ impl Parser {
                         Func::User(func) => {
                             let result =
                                 func.call(args?, self.variables.clone(), self.functions.clone());
+
                             if let Err(err) = result {
                                 return Err(ParseError::FunctionExecution(err.to_string()));
                             }
@@ -588,6 +592,11 @@ impl Parser {
                     Token::Void,
                     operand,
                 )))
+            }
+
+            Token::Type(types) => {
+                self.position += 1;
+                Ok(Token::Type(types.clone()))
             }
 
             v => {

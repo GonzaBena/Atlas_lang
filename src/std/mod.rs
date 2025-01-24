@@ -4,6 +4,7 @@ use std::{collections::HashMap, fmt::Debug, sync::Arc};
 mod io;
 mod math;
 mod string;
+mod types;
 
 pub fn standard_library() -> HashMap<String, StdFunc> {
     let mut functions = HashMap::new();
@@ -12,6 +13,7 @@ pub fn standard_library() -> HashMap<String, StdFunc> {
     functions.extend(io::io_functions());
     functions.extend(math::math_functions());
     functions.extend(string::string_functions());
+    functions.extend(types::types_functions());
 
     functions
 }
