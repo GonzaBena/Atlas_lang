@@ -214,10 +214,16 @@ impl<'a> Lexer<'a> {
 
         while let Some(char) = self.content.peek() {
             if *char == ' ' || !char.is_alphanumeric() {
-                break;
+                if char == &'_' {
+                    id.push(*char);
+                    self.content.next();
+                } else {
+                    break;
+                }
+            } else {
+                id.push(*char);
+                self.content.next();
             }
-            id.push(*char);
-            self.content.next();
         }
 
         if id.trim() == "" {

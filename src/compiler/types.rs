@@ -17,6 +17,7 @@ pub enum Types {
     Boolean,
     Void,
     Function,
+    List,
     Inferred,
 }
 
@@ -180,6 +181,7 @@ impl fmt::Display for Types {
             Types::Void => write!(f, "Void"),
             Types::Function => write!(f, "Function"),
             Types::Inferred => write!(f, "Inferred"),
+            Types::List => write!(f, "List"),
         }
     }
 }

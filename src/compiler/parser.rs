@@ -2,6 +2,7 @@ use crate::compiler::{
     function::{Argument, Function},
     types::Types,
 };
+use crate::std::debug::DEBUG_LIST;
 
 use super::{
     elements::{keyword::Keyword, operation::Operation, operator::Operator, token::Token},
@@ -18,10 +19,12 @@ pub struct Parser {
     /// List of tokens to parse
     tokens: Vec<Token>,
     position: usize,
+    scope: usize,
     variables: Rc<RefCell<VariableTable>>,
     functions: Rc<RefCell<FunctionTable>>,
 }
 
+#[allow(dead_code)]
 impl Parser {
     pub fn new(
         tokens: Vec<Token>,
@@ -36,6 +39,7 @@ impl Parser {
         Parser {
             tokens,
             position: 0,
+            scope: 0,
             variables: variables.unwrap_or(Rc::new(RefCell::new(VariableTable::new()))),
             functions: functions.unwrap_or(Rc::new(RefCell::new(FunctionTable::new()))),
         }
@@ -43,12 +47,14 @@ impl Parser {
 
     fn internal_new(
         tokens: Vec<Token>,
+        scope: usize,
         variables: Rc<RefCell<VariableTable>>,
         functions: Rc<RefCell<FunctionTable>>,
     ) -> Self {
         Parser {
             tokens,
             position: 0,
+            scope,
             variables,
             functions,
         }
@@ -389,7 +395,7 @@ impl Parser {
             return Ok(());
         }
 
-        let variable: Variable;
+        let mut variable: Variable;
         match value_token {
             Token::Operation(mut expr) => {
                 let value = expr.resolve().unwrap();
@@ -423,7 +429,8 @@ impl Parser {
                 variable = Variable::new(identifier.to_string(), data.1, data.0.clone(), 0);
             }
         }
-        table.variables.insert(identifier.to_string(), variable);
+        variable.scope = self.scope;
+        let _ = table.insert(identifier.as_ref(), variable);
 
         Ok(())
     }
@@ -496,7 +503,26 @@ impl Parser {
             }
 
             Token::NewLine => {
-                self.position += 1; // Consume the number
+                self.position += 1; // Consume the new line
+                while let Some(Token::NewLine) = self.tokens.get(self.position) {
+                    self.position += 1;
+                }
+                return self.factor();
+            }
+
+            Token::StartBrace => {
+                self.position += 1; // Consume the brace
+                self.scope += 1;
+                while let Some(Token::NewLine) = self.tokens.get(self.position) {
+                    self.position += 1;
+                }
+                return self.factor();
+            }
+
+            Token::EndBrace => {
+                self.position += 1; // Consume the brace
+                self.scope -= 1;
+                self.variables.borrow_mut().pop_scope(self.scope + 1);
                 while let Some(Token::NewLine) = self.tokens.get(self.position) {
                     self.position += 1;
                 }
@@ -543,6 +569,7 @@ impl Parser {
                         // panic(&msg);
                         return Err(args.clone().unwrap_err());
                     }
+                    let args = args.unwrap();
                     let func = if let Ok(function) = self.functions.borrow().get(var) {
                         function
                     } else {
@@ -552,7 +579,23 @@ impl Parser {
                     };
                     match func {
                         Func::Std(std_func) => {
-                            let result = std_func.call(args?);
+                            let result = if DEBUG_LIST.contains(&std_func.name.as_str()) {
+                                let mut vars = vec![];
+                                for (_, var) in self.variables.borrow().variables.iter() {
+                                    vars.push(var.details());
+                                }
+                                let params = vec![Argument::new(
+                                    "variables".into(),
+                                    Types::List,
+                                    None,
+                                    Some(Box::new(Token::List(
+                                        vars.iter().map(|x| Token::Str(x.clone().into())).collect(),
+                                    ))),
+                                )];
+                                std_func.call(params)
+                            } else {
+                                std_func.call(args)
+                            };
                             if let Err(err) = result {
                                 return Err(ParseError::FunctionExecution(err.to_string()));
                             }
@@ -560,7 +603,7 @@ impl Parser {
                         }
                         Func::User(func) => {
                             let result =
-                                func.call(args?, self.variables.clone(), self.functions.clone());
+                                func.call(args, self.variables.clone(), self.functions.clone());
 
                             if let Err(err) = result {
                                 return Err(ParseError::FunctionExecution(err.to_string()));
@@ -632,11 +675,21 @@ impl Parser {
         for res in result.split(|x| *x.to_string() == Token::Separator(',').to_string()) {
             let mut parser = Parser::internal_new(
                 res.to_vec(),
+                0,
                 Rc::new(RefCell::new(variables.clone())),
                 Rc::new(RefCell::new(functions.clone())),
             );
             let result = parser.parse();
-            data.push(Argument::from(result?[0].clone()));
+            match result {
+                Ok(vec) => {
+                    if vec.len() != 0 {
+                        data.push(Argument::from(vec[0].clone()));
+                    }
+                }
+                Err(err) => {
+                    return Err(err);
+                }
+            }
         }
 
         Ok(data)
@@ -663,6 +716,7 @@ mod parser_test {
             Parser {
                 tokens: vec![],
                 position: 0,
+                scope: 0,
                 variables: Rc::new(RefCell::new(VariableTable::new())),
                 functions: Rc::new(RefCell::new(FunctionTable::new()))
             }

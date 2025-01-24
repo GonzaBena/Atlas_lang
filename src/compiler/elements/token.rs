@@ -29,6 +29,7 @@ pub enum Token {
     String(String),
     Str(Arc<str>),
     Boolean(bool),
+    List(Vec<Token>),
     // Function(Arc<str>),
 
     // Others
@@ -278,6 +279,7 @@ impl Token {
             Token::NewLine => "\\n",
             Token::EOF => "EOF",
             Token::Void => "Void",
+            Token::List(_) => "List",
         }
     }
 

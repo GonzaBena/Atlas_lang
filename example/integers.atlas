@@ -1,5 +1,12 @@
-var hola: Int64 = 10
+var int32_1: Int32 = 10
+var int32_2: Int32 = 20
 
-dpprint(hola)
-hola //= 2
-dpprint(hola) # 5
+{
+var int64_1: Int32 = 10
+{
+var int64_2: Int32 = 20
+}
+}
+
+
+showVars()

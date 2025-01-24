@@ -5,6 +5,7 @@ use super::{error::parse_error::ParseError, variable::Variable};
 #[derive(Debug, Clone)]
 pub struct VariableTable {
     pub(crate) variables: HashMap<String, Variable>,
+    pub(crate) length: usize,
 }
 
 #[allow(dead_code)]
@@ -12,6 +13,7 @@ impl VariableTable {
     pub fn new() -> Self {
         VariableTable {
             variables: HashMap::new(),
+            length: 0,
         }
     }
 
@@ -37,17 +39,39 @@ impl VariableTable {
 
     pub fn insert(&mut self, key: &str, value: Variable) -> Result<(), ParseError> {
         if !self.variables.contains_key(key) {
-            self.variables.insert(key.to_string(), value);
+            let mut var = value.clone();
+            var.set_id(self.length + 1);
+            self.variables.insert(key.to_string(), var);
+            self.length += 1;
+
             Ok(())
-        } else if let Some(var) = self.variables.get_key_value(key) {
-            if *var.1 == value {
-                return Err(ParseError::DefinedVariable("{var.1.name}".into()));
+        } else if let Some((name, var)) = self.variables.get_key_value(key) {
+            if *var == value {
+                return Err(ParseError::DefinedVariable(format!("{name}")));
             }
-            self.variables.insert(key.to_string(), value);
-            Ok(())
+            if var.id == 0 {
+                let mut var = value.clone();
+                var.set_id(self.length + 1);
+                self.variables.insert(key.to_string(), var);
+                self.length += 1;
+                return Ok(());
+            } else {
+                self.variables.insert(key.to_string(), value);
+                self.length += 1;
+                Ok(())
+            }
         } else {
-            self.variables.insert(key.to_string(), value);
-            Ok(())
+            if value.id == 0 {
+                let mut var = value.clone();
+                var.set_id(self.length + 1);
+                self.variables.insert(key.to_string(), value);
+                self.length += 1;
+                return Ok(());
+            } else {
+                self.variables.insert(key.to_string(), value);
+                self.length += 1;
+                Ok(())
+            }
         }
     }
 
@@ -66,6 +90,7 @@ impl VariableTable {
 
     fn delete_one(&mut self, key: &str) -> Result<Variable, ParseError> {
         if let Some(var) = self.variables.remove(key) {
+            self.length -= 1;
             Ok(var)
         } else {
             Err(ParseError::UndefinedVariable(format!(
@@ -93,5 +118,20 @@ impl VariableTable {
             }
         }
         (result, not_deleted)
+    }
+
+    pub fn pop_scope(&mut self, scope: usize) -> Vec<Variable> {
+        let mut result: Vec<Variable> = vec![];
+        let mut keys: Vec<String> = vec![];
+        for (key, var) in self.variables.iter() {
+            if var.scope >= scope {
+                result.push(var.clone());
+                keys.push(key.to_string());
+            }
+        }
+        for key in keys {
+            self.variables.remove(&key);
+        }
+        result
     }
 }
