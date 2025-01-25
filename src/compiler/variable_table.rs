@@ -134,4 +134,56 @@ impl VariableTable {
         }
         result
     }
+
+    pub fn clear(&mut self) {
+        self.variables.clear();
+        self.length = 0;
+    }
+
+    pub fn len(&self) -> usize {
+        self.length
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.length == 0
+    }
+
+    pub fn contains_key(&self, key: &str) -> bool {
+        self.variables.contains_key(key)
+    }
+
+    pub fn show_vars(&self) -> String {
+        let mut largest_id = "".to_string();
+        let mut largest_name = "".to_string();
+        let mut largest_type = "".to_string();
+        let mut largest_value = "".to_string();
+        let mut largest_scope = "".to_string();
+
+        for key in self.variables.values() {
+            if key.id.to_string().len() > largest_id.len() {
+                largest_id = key.id.to_string();
+            }
+            if key.name.len() > largest_name.len() {
+                largest_name = key.name.clone();
+            }
+            if key.var_type.to_string().len() > largest_type.len() {
+                largest_type = key.var_type.to_string();
+            }
+            if key.value.to_string().len() > largest_value.len() {
+                largest_value = key.value.to_string();
+            }
+            if key.scope.to_string().len() > largest_scope.len() {
+                largest_scope = key.scope.to_string();
+            }
+        }
+        let mut txt = String::new();
+        for _ in 0..self.variables.iter().len() {
+            let msg = format!(
+                "{} - {}: {:?} = {} | scope: {}\n",
+                largest_id, largest_name, largest_type, largest_value, largest_scope
+            );
+            txt.push_str(&msg);
+        }
+        txt
+    }
 }

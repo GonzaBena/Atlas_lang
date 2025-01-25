@@ -32,7 +32,7 @@ impl Variable {
             format!("{} - ", self.id)
         };
         format!(
-            "{}{}: {:?} = {} | scope: {}",
+            "{}{} - {:?} - {} - {}",
             &id, self.name, self.var_type, self.value, self.scope
         )
     }
