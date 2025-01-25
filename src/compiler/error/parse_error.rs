@@ -8,7 +8,9 @@ pub enum ParseError {
     SyntaxError(String),
     UndefinedVariable(String),
     UndefinedFunction(String),
+    UndefinedType(String),
     InvalidType(String),
+    TypeError(String),
     DefinedVariable(String),
     DefinedFunction(String),
     FunctionExecution(String),
@@ -33,7 +35,7 @@ impl fmt::Display for ParseError {
 
             Self::DefinedFunction(txt) => write!(
                 f,
-                "DefinedFunctionError: The fnction '{txt}' already was defined."
+                "DefinedFunctionError: The function '{txt}' already was defined."
             ),
             v => write!(f, "{v}"),
         }

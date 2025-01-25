@@ -6,7 +6,7 @@ use std::{
 use super::{keyword::Keyword, operation::Operation, operator::Operator};
 use crate::{
     compiler::{error::parse_error::ParseError, types::Types},
-    types::basic::number::{double::Double, int32::Int32, int64::Int64},
+    types::basic::number::{double::Double, float::Float, int32::Int32, int64::Int64},
 };
 
 /// Represent each possible token which you can use.
@@ -25,6 +25,7 @@ pub enum Token {
     // Datatypes
     Int32(Int32),
     Int64(Int64),
+    Float(Float),
     Double(Double),
     String(String),
     Str(Arc<str>),
@@ -52,6 +53,7 @@ impl Display for Token {
             Token::Keyword(keyword) => write!(f, "{}", String::from(keyword.to_string())),
             Token::Int32(num) => write!(f, "{num}"),
             Token::Int64(num) => write!(f, "{num}"),
+            Token::Float(num) => write!(f, "{num}"),
             Token::Double(num) => write!(f, "{num}"),
             Token::NewLine => write!(f, "{}", String::from("\n")),
             Token::EOF => write!(f, "{}", String::from("EOF")),
@@ -260,6 +262,7 @@ impl Token {
             Token::Int32(int32) => Box::leak(int32.to_string().into_boxed_str()),
             Token::Int64(int64) => Box::leak(int64.to_string().into_boxed_str()),
             Token::Double(double) => Box::leak(double.to_string().into_boxed_str()),
+            Token::Float(float) => Box::leak(float.to_string().into_boxed_str()),
             Token::String(s) => s,
             Token::Str(s) => s,
             Token::Boolean(v) => {
@@ -313,6 +316,12 @@ impl From<u32> for Token {
 impl From<f64> for Token {
     fn from(value: f64) -> Self {
         Token::Double(value.into())
+    }
+}
+
+impl From<f32> for Token {
+    fn from(value: f32) -> Self {
+        Token::Float(value.into())
     }
 }
 

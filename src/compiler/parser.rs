@@ -316,7 +316,9 @@ impl Parser {
                 Types::Inferred
             }
         } else {
-            Types::Inferred
+            return Err(ParseError::SyntaxError(
+                "Expected a type after the identifier".into(),
+            ));
         };
 
         // Obtenemos el operador de asignación: puede ser '=' o '+='
@@ -403,6 +405,7 @@ impl Parser {
                 if value == Token::Void {
                     return Err(ParseError::SyntaxError("error".into()));
                 }
+
                 let infered_type = Types::inferred(&value)?;
                 let cloned: Token = value.clone();
                 let data = Types::transform(
@@ -413,20 +416,38 @@ impl Parser {
                         infered_type
                     },
                 )?;
-                variable = Variable::new(identifier.to_string(), data.1, data.0, 0);
+                variable = Variable::new(identifier.to_string(), data.1, data.0, self.scope);
             }
             value => {
-                let infered_type = Types::inferred(&value)?;
-                let cloned: Token = value.clone();
-                let data = Types::transform(
-                    cloned,
-                    if var_type != Types::Inferred {
-                        var_type
+                // let infered_type = Types::inferred(&value)?;
+                // let data = Types::transform(
+                //     cloned,
+                //     if var_type != Types::Inferred {
+                //         var_type
+                //     } else {
+                //         infered_type
+                //     },
+                // )?;
+                let infered_type = Types::from(value.clone());
+                let new_value;
+                if infered_type != var_type {
+                    if infered_type.is_integer() && var_type.is_integer() {
+                        new_value = Types::transform(value.clone(), var_type.clone())?.0;
+                    } else if infered_type.is_float() && var_type.is_float() {
+                        new_value = Types::transform(value.clone(), var_type.clone())?.0;
                     } else {
-                        infered_type
-                    },
-                )?;
-                variable = Variable::new(identifier.to_string(), data.1, data.0.clone(), 0);
+                        let msg = format!(
+                            "The type of '{}' must be a <{var_type}> and It's a <{}>.",
+                            identifier,
+                            Types::from(value.clone())
+                        );
+                        return Err(ParseError::TypeError(msg));
+                    }
+                    variable =
+                        Variable::new(identifier.to_string(), var_type, new_value, self.scope);
+                } else {
+                    variable = Variable::new(identifier.to_string(), var_type, value, self.scope);
+                }
             }
         }
         variable.scope = self.scope;
@@ -619,8 +640,14 @@ impl Parser {
                     }
                     return Ok(*variable.value.clone());
                 } else {
-                    let msg = format!("The variable '{var}' doesn't exists.");
-                    Err(ParseError::UndefinedVariable(msg))
+                    // if previous token is ':', so it must be a Type
+                    if let Some(Token::Separator(':')) = self.tokens.get(self.position - 2) {
+                        let msg = format!("The type '{var}' doesn't exists.");
+                        Err(ParseError::UndefinedType(msg))
+                    } else {
+                        let msg = format!("The variable '{var}' doesn't exists.");
+                        Err(ParseError::UndefinedVariable(msg))
+                    }
                 }
             }
 

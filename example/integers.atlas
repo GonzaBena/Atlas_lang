@@ -1,12 +1,9 @@
-var int32_1: Int32 = 10
-var int32_2: Int32 = 20
 
-{
-var int64_1: Int32 = 10
-{
-var int64_2: Int32 = 20
-}
-}
+
+var float_1: Float = 10.0
+var float_2: Float = 20.2
+
+
 
 
 showVars()

@@ -2,7 +2,7 @@ use std::{fmt, str::FromStr};
 
 use serde::Serialize;
 
-use crate::types::basic::number::{double::Double, int32::Int32, int64::Int64};
+use crate::types::basic::number::{double::Double, float::Float, int32::Int32, int64::Int64};
 
 use super::{elements::token::Token, error::parse_error::ParseError};
 
@@ -11,6 +11,7 @@ use super::{elements::token::Token, error::parse_error::ParseError};
 pub enum Types {
     Int32,
     Int64,
+    Float,
     Double,
     String,
     Str,
@@ -32,7 +33,7 @@ impl Types {
 
     pub fn is_float(&self) -> bool {
         match self {
-            Self::Double => true,
+            Self::Double | Self::Float => true,
             _ => false,
         }
     }
@@ -68,6 +69,7 @@ impl Types {
             Token::Int32(_) => Ok(Self::Int32),
             Token::Int64(_) => Ok(Self::Int64),
             Token::Double(_) => Ok(Self::Double),
+            Token::Float(_) => Ok(Self::Float),
             Token::String(_) => Ok(Self::String),
             Token::Str(_) => Ok(Self::Str),
             Token::Type(types) => Ok(types.clone()),
@@ -123,6 +125,36 @@ impl Types {
             )),
             (Types::Int64, Token::Void) => Ok((Token::Int64(Int64::new(0)), Types::Int64)),
 
+            (Types::Float, Token::Int32(int32)) => {
+                Ok((Token::Float(Float::new(*int32 as f32)), Types::Float))
+            }
+            (Types::Float, Token::Int64(int64)) => {
+                Ok((Token::Float(Float::new(*int64 as f32)), Types::Float))
+            }
+            (Types::Float, Token::Float(double)) => {
+                Ok((Token::Float(double.clone()), Types::Float))
+            }
+            (Types::Float, Token::Double(double)) => {
+                Ok((Token::Float(Float::new(*double as f32)), Types::Float))
+            }
+            (Types::Float, Token::String(s)) => Ok((
+                Token::Float(Float::new(
+                    s.chars().map(|c| (c as i64) as f32).sum::<f32>(),
+                )),
+                Types::Float,
+            )),
+            (Types::Float, Token::Str(s)) => Ok((
+                Token::Float(Float::new(
+                    s.chars().map(|c| (c as i64) as f32).sum::<f32>(),
+                )),
+                Types::Float,
+            )),
+            (Types::Float, Token::Boolean(b)) => Ok((
+                Token::Float(if b { Float::new(1.0) } else { Float::new(0.0) }),
+                Types::Float,
+            )),
+            (Types::Float, Token::Void) => Ok((Token::Float(Float::new(0.0)), Types::Float)),
+
             (Types::Double, Token::Int32(int32)) => {
                 Ok((Token::Double(Double::new(*int32 as f64)), Types::Double))
             }
@@ -131,6 +163,9 @@ impl Types {
             }
             (Types::Double, Token::Double(double)) => {
                 Ok((Token::Double(double.clone()), Types::Double))
+            }
+            (Types::Double, Token::Float(double)) => {
+                Ok((Token::Double(Double::new(*double as f64)), Types::Double))
             }
             (Types::Double, Token::String(s)) => Ok((
                 Token::Double(Double::new(
@@ -144,7 +179,6 @@ impl Types {
                 )),
                 Types::Double,
             )),
-
             (Types::Double, Token::Boolean(b)) => Ok((
                 Token::Double(if b {
                     Double::new(1.0)
@@ -153,7 +187,6 @@ impl Types {
                 }),
                 Types::Double,
             )),
-
             (Types::Double, Token::Void) => Ok((Token::Double(Double::new(0.0)), Types::Double)),
 
             (Types::String, v) => {
@@ -174,6 +207,7 @@ impl fmt::Display for Types {
         match self {
             Types::Int32 => write!(f, "Int32"),
             Types::Int64 => write!(f, "Int64"),
+            Types::Float => write!(f, "Float"),
             Types::Double => write!(f, "Double"),
             Types::String => write!(f, "String"),
             Types::Str => write!(f, "Str"),
@@ -193,6 +227,7 @@ impl FromStr for Types {
             "Boolean" => Ok(Self::Boolean),
             "Int32" => Ok(Self::Int32),
             "Int64" => Ok(Self::Int64),
+            "Float" => Ok(Self::Float),
             "Double" => Ok(Self::Double),
             "String" => Ok(Self::String),
             "Str" => Ok(Self::Str),
@@ -209,6 +244,7 @@ impl From<&Token> for Types {
             Token::Boolean(_) => Self::Boolean,
             Token::Int32(_) => Self::Int32,
             Token::Int64(_) => Self::Int64,
+            Token::Float(_) => Self::Float,
             Token::Double(_) => Self::Double,
             Token::String(_) => Self::String,
             Token::Str(_) => Self::Str,
@@ -224,6 +260,7 @@ impl From<Token> for Types {
         match value {
             Token::Boolean(_) => Self::Boolean,
             Token::Int32(_) => Self::Int32,
+            Token::Float(_) => Self::Float,
             Token::Double(_) => Self::Double,
             Token::String(_) => Self::String,
             // Token::Str => Self::Str,
