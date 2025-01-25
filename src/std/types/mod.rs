@@ -15,7 +15,6 @@ pub fn types_functions() -> HashMap<String, StdFunc> {
                 return Err("The typeof function only accept one argument.".to_string());
             }
             let value = args[0].value.as_ref().unwrap();
-            println!("value: {value:?}");
 
             match **value {
                 Token::Int32(_) => println!("{}", "<type: Int32>".blue()),

@@ -326,6 +326,31 @@ impl Parser {
         let value_token = self.resolve()?;
         let inferred_type = Types::inferred(&value_token)?;
 
+        if operator.is_assignation() {
+            self.validate_existing_identifier()?;
+            let mut table = self.variables.borrow_mut();
+            let var = table.get_mut(&identifier)?;
+
+            let existing_value = *var.value.clone();
+            let new_value = match value_token.clone() {
+                Token::Operation(mut expr) => expr.resolve()?,
+                value => operator.execute(existing_value, value)?,
+            };
+
+            let inferred_type = Types::inferred(&new_value)?;
+
+            if inferred_type == var.var_type {
+                var.value = Box::new(new_value);
+            } else {
+                return Err(ParseError::TypeError(format!(
+                    "Cannot assign type '{}' to variable '{}'",
+                    inferred_type, identifier
+                )));
+            }
+            let mut var = var.clone();
+            table.update(identifier.as_ref(), &mut var)?;
+        }
+
         println!(
             "new_value: {operator:?}, assignation: {}",
             operator.is_assignation()
@@ -718,7 +743,6 @@ impl Parser {
         let (is_assignment, op) = self.is_assignment()?;
         self.position += 1;
         if is_assignment {
-            println!("Hola");
             let var = self.validate_existing_identifier()?;
             let right = self.term()?;
 
@@ -739,9 +763,7 @@ impl Parser {
                 let mut var = var.clone();
                 let id = var.name.clone();
 
-                println!("{:?}\n", self.variables);
                 table.update(&id, &mut var)?;
-                println!("{:?}", self.variables);
             } else {
                 return Err(ParseError::UndefinedVariable(var));
             }
@@ -773,7 +795,6 @@ impl Parser {
 
     fn is_assignment(&mut self) -> Result<(bool, Operator), ParseError> {
         if let Some(Token::Operator(op)) = self.tokens.get(self.position) {
-            println!("tokens: {:?}", self.tokens.get(self.position));
             if op.is_assignation() {
                 return Ok((true, op.clone()));
             }

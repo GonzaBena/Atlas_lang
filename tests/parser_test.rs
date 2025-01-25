@@ -53,9 +53,16 @@ fn add_assign_test() {
     let parse = parser.parse().unwrap();
 
     assert_eq!(parse, vec![]);
+
     let result = vec![(
         "hola",
-        Variable::new("hola".to_string(), Types::Int32, Token::Int32(20.into()), 0),
+        Variable {
+            id: 1,
+            name: "hola".to_string(),
+            var_type: Types::Int32,
+            value: Box::new(Token::Int32(20.into())),
+            scope: 0,
+        },
     )];
     let tuple = parser.get_variables();
 

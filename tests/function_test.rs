@@ -43,11 +43,8 @@ fn std_function_test() {
 
     let mut lex = Lexer::new(code);
     let tokens = lex.lex();
-    println!("{tokens:?}");
     let mut parser = Parser::new(tokens, None, None);
-    let parse = parser.parse();
-
-    println!("\nparse: {parse:?}");
+    let _ = parser.parse();
 
     for (name, func) in parser.get_functions() {
         if name == "hello" {

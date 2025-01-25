@@ -5,7 +5,6 @@ pub fn pad_end(string: &str, length: usize) -> String {
     while txt.len() < length {
         txt.push_str(" ");
     }
-    println!("padded: {txt:?}, string: {string}, length: {length}");
 
     txt
 }

@@ -2,11 +2,11 @@ use super::{elements::token::Token, types::Types};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Variable {
-    pub(crate) id: usize,
-    pub(crate) name: String,
-    pub(crate) var_type: Types,
-    pub(crate) value: Box<Token>,
-    pub(crate) scope: usize,
+    pub id: usize,
+    pub name: String,
+    pub var_type: Types,
+    pub value: Box<Token>,
+    pub scope: usize,
 }
 
 #[allow(dead_code)]
