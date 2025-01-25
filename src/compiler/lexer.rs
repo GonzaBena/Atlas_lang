@@ -4,6 +4,7 @@ use super::{
     types::Types,
 };
 use crate::compiler::elements::token::Token;
+use crate::utils::panic;
 use std::{
     iter::Peekable,
     str::{Chars, FromStr},
@@ -51,7 +52,7 @@ impl<'a> Lexer<'a> {
                                 result.push(Token::Type(id.return_type.unwrap()));
                             }
                         },
-                        Err(err) => panic!("{:?}", err),
+                        Err(err) => panic(&format!("{:?}", err)),
                     }
                 }
                 '"' => {
@@ -59,7 +60,7 @@ impl<'a> Lexer<'a> {
                     let id = self.cut_string();
                     match id {
                         Ok(id) => result.push(Token::String(id)),
-                        Err(err) => panic!("{:?}", err),
+                        Err(err) => panic(&format!("{:?}", err)),
                     }
                 }
 
@@ -68,7 +69,7 @@ impl<'a> Lexer<'a> {
                     let number = self.cut_number();
                     match number {
                         Ok(num) => result.push(Token::to_number(num, Types::Void)),
-                        Err(err) => panic!("{:?}", err),
+                        Err(err) => panic(&format!("{:?}", err)),
                     }
                 }
 

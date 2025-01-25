@@ -1,4 +1,4 @@
-use crate::compiler::types::Types;
+use crate::compiler::{error::parse_error::ParseError, types::Types};
 
 use super::token::Token;
 
@@ -83,7 +83,7 @@ impl ToString for Operator {
 
 #[allow(dead_code)]
 impl Operator {
-    pub fn execute<'a>(&self, left: Token, right: Token) -> Token {
+    pub fn execute<'a>(&self, left: Token, right: Token) -> Result<Token, ParseError> {
         let mut left = left;
         let mut right = right;
         if let Token::Operation(mut op) = left {
@@ -96,71 +96,83 @@ impl Operator {
         match self {
             Self::Add | Self::AddAssign => match (left, right) {
                 (Token::Int32(num1), Token::Int32(num2)) => {
-                    Token::to_number(num1 + num2, Types::Int32)
+                    Ok(Token::to_number(num1 + num2, Types::Int32))
                 }
                 (Token::Double(num1), Token::Double(num2)) => {
-                    Token::to_number(num1 + num2, Types::Double)
+                    Ok(Token::to_number(num1 + num2, Types::Double))
                 }
                 (Token::Double(num1), Token::Int32(num2)) => {
-                    Token::to_number(num1 + num2, Types::Double)
+                    Ok(Token::to_number(num1 + num2, Types::Double))
                 }
                 (Token::Int32(num1), Token::Double(num2)) => {
-                    Token::to_number(num1 + num2, Types::Double)
+                    Ok(Token::to_number(num1 + num2, Types::Double))
                 }
 
                 (Token::Int32(int32), Token::Int64(int64)) => {
-                    Token::to_number(int32 + int64, Types::Int64)
+                    Ok(Token::to_number(int32 + int64, Types::Int64))
                 }
 
                 // MARK: ------ Int64 ------
                 (Token::Int64(int64), Token::Int32(int32)) => {
-                    Token::to_number(int32 + int64, Types::Int64)
+                    Ok(Token::to_number(int32 + int64, Types::Int64))
                 }
                 (Token::Int64(int64), Token::Int64(int64_2)) => {
-                    Token::to_number(int64 + int64_2, Types::Int64)
+                    Ok(Token::to_number(int64 + int64_2, Types::Int64))
                 }
                 (Token::Int64(int64), Token::Double(double)) => {
-                    Token::to_number(int64 + double, Types::Double)
+                    Ok(Token::to_number(int64 + double, Types::Double))
                 }
 
                 // MARK: ------ Double ------
                 (Token::Double(double), Token::Int64(int64)) => {
-                    Token::to_number(double + int64, Types::Int64)
+                    Ok(Token::to_number(double + int64, Types::Int64))
                 }
 
-                _ => Token::EOF,
+                (left, right) => Err(ParseError::InvalidOperation {
+                    operation: self.to_string(),
+                    type1: Types::inferred(&left)?.to_string(),
+                    type2: Types::inferred(&right)?.to_string(),
+                }),
             },
 
             Self::Sub | Self::SubAssign => match (left, right) {
                 (Token::Int32(num1), Token::Int32(num2)) => {
-                    Token::to_number(num1 - num2, Types::Int32)
+                    Ok(Token::to_number(num1 - num2, Types::Int32))
                 }
                 (Token::Double(num1), Token::Double(num2)) => {
-                    Token::to_number(num1 - num2, Types::Double)
+                    Ok(Token::to_number(num1 - num2, Types::Double))
                 }
                 (Token::Double(num1), Token::Int32(num2)) => {
-                    Token::to_number(num1 - num2, Types::Double)
+                    Ok(Token::to_number(num1 - num2, Types::Double))
                 }
                 (Token::Int32(num1), Token::Double(num2)) => {
-                    Token::to_number(num1 - num2, Types::Double)
+                    Ok(Token::to_number(num1 - num2, Types::Double))
                 }
-                _ => Token::EOF,
+                (left, right) => Err(ParseError::InvalidOperation {
+                    operation: self.to_string(),
+                    type1: Types::inferred(&left)?.to_string(),
+                    type2: Types::inferred(&right)?.to_string(),
+                }),
             },
 
             Self::Mul | Self::MulAssign => match (left, right) {
                 (Token::Int32(num1), Token::Int32(num2)) => {
-                    Token::to_number(num1 * num2, Types::Double)
+                    Ok(Token::to_number(num1 * num2, Types::Double))
                 }
                 (Token::Double(num1), Token::Double(num2)) => {
-                    Token::to_number(num1 * num2, Types::Double)
+                    Ok(Token::to_number(num1 * num2, Types::Double))
                 }
                 (Token::Double(num1), Token::Int32(num2)) => {
-                    Token::to_number(num1 * num2, Types::Double)
+                    Ok(Token::to_number(num1 * num2, Types::Double))
                 }
                 (Token::Int32(num1), Token::Double(num2)) => {
-                    Token::to_number(num1 * num2, Types::Double)
+                    Ok(Token::to_number(num1 * num2, Types::Double))
                 }
-                _ => Token::EOF,
+                (left, right) => Err(ParseError::InvalidOperation {
+                    operation: self.to_string(),
+                    type1: Types::inferred(&left)?.to_string(),
+                    type2: Types::inferred(&right)?.to_string(),
+                }),
             },
 
             Self::Pow | Self::PowAssign => match (left, right) {
@@ -168,33 +180,41 @@ impl Operator {
                     let mut result = *num1;
 
                     if *num2 <= 1 {
-                        return Token::Int32(num1);
+                        return Ok(Token::Int32(num1));
                     }
 
                     for _ in 2..=*num2 {
                         result = result.checked_mul(*num1).unwrap_or_else(|| i32::MAX);
                     }
 
-                    return Token::Int32(result.into());
+                    return Ok(Token::Int32(result.into()));
                 }
-                _ => Token::EOF,
+                (left, right) => Err(ParseError::InvalidOperation {
+                    operation: self.to_string(),
+                    type1: Types::inferred(&left)?.to_string(),
+                    type2: Types::inferred(&right)?.to_string(),
+                }),
             },
 
             Self::Div | Self::DivAssign => {
                 return match (left, right) {
                     (Token::Int32(num1), Token::Int32(num2)) => {
-                        Token::to_number(num1 / num2, Types::Double)
+                        Ok(Token::to_number(num1 / num2, Types::Double))
                     }
                     (Token::Double(num1), Token::Double(num2)) => {
-                        Token::to_number(num1 / num2, Types::Double)
+                        Ok(Token::to_number(num1 / num2, Types::Double))
                     }
                     (Token::Double(num1), Token::Int32(num2)) => {
-                        Token::to_number(num1 / num2, Types::Double)
+                        Ok(Token::to_number(num1 / num2, Types::Double))
                     }
                     (Token::Int32(num1), Token::Double(num2)) => {
-                        Token::to_number(num1 / num2, Types::Double)
+                        Ok(Token::to_number(num1 / num2, Types::Double))
                     }
-                    _ => Token::EOF,
+                    (left, right) => Err(ParseError::InvalidOperation {
+                        operation: self.to_string(),
+                        type1: Types::inferred(&left)?.to_string(),
+                        type2: Types::inferred(&right)?.to_string(),
+                    }),
                 };
             }
 
@@ -202,47 +222,55 @@ impl Operator {
                 match (left, right) {
                     // MARK: ------ Int32 ------
                     (Token::Int32(num1), Token::Int32(num2)) => {
-                        Token::Int32((num1 / num2).ceil().into())
+                        Ok(Token::Int32((num1 / num2).ceil().into()))
                     }
                     (Token::Int32(num1), Token::Int64(num2)) => {
-                        Token::Int32((num1 / num2).ceil().into())
+                        Ok(Token::Int32((num1 / num2).ceil().into()))
                     }
                     (Token::Int32(num1), Token::Double(num2)) => {
-                        Token::Int32((num1 / num2).ceil().into())
+                        Ok(Token::Int32((num1 / num2).ceil().into()))
                     }
 
                     // MARK: ------ Int64 ------
                     (Token::Int64(num1), Token::Int32(num2)) => {
-                        Token::Int32((num1 / num2).ceil().into())
+                        Ok(Token::Int32((num1 / num2).ceil().into()))
                     }
                     (Token::Int64(num1), Token::Int64(num2)) => {
-                        Token::Int32((num1 / num2).ceil().into())
+                        Ok(Token::Int32((num1 / num2).ceil().into()))
                     }
                     (Token::Int64(num1), Token::Double(num2)) => {
-                        Token::Int32((num1 / num2).ceil().into())
+                        Ok(Token::Int32((num1 / num2).ceil().into()))
                     }
 
                     // MARK: ------ Double ------
                     (Token::Double(num1), Token::Int32(num2)) => {
-                        Token::Int32((num1 / num2).ceil().into())
+                        Ok(Token::Int32((num1 / num2).ceil().into()))
                     }
                     (Token::Double(num1), Token::Int64(num2)) => {
-                        Token::Int32((num1 / num2).ceil().into())
+                        Ok(Token::Int32((num1 / num2).ceil().into()))
                     }
                     (Token::Double(num1), Token::Double(num2)) => {
-                        Token::Int32((num1 / num2).ceil().into())
+                        Ok(Token::Int32((num1 / num2).ceil().into()))
                     }
 
-                    _ => Token::EOF,
+                    (left, right) => Err(ParseError::InvalidOperation {
+                        operation: self.to_string(),
+                        type1: Types::inferred(&left)?.to_string(),
+                        type2: Types::inferred(&right)?.to_string(),
+                    }),
                 }
             }
 
             Self::Mod | Self::ModAssign => match (left, right) {
-                (Token::Int32(num1), Token::Int32(num2)) => Token::Int32(num1 % num2),
-                (Token::Double(num1), Token::Double(num2)) => Token::Int32(num1 % num2),
-                (Token::Double(num1), Token::Int32(num2)) => Token::Int32(num1 % num2),
-                (Token::Int32(num1), Token::Double(num2)) => Token::Int32(num1 % num2),
-                _ => Token::EOF,
+                (Token::Int32(num1), Token::Int32(num2)) => Ok(Token::Int32(num1 % num2)),
+                (Token::Double(num1), Token::Double(num2)) => Ok(Token::Int32(num1 % num2)),
+                (Token::Double(num1), Token::Int32(num2)) => Ok(Token::Int32(num1 % num2)),
+                (Token::Int32(num1), Token::Double(num2)) => Ok(Token::Int32(num1 % num2)),
+                (left, right) => Err(ParseError::InvalidOperation {
+                    operation: self.to_string(),
+                    type1: Types::inferred(&left)?.to_string(),
+                    type2: Types::inferred(&right)?.to_string(),
+                }),
             },
 
             _ => todo!("Hola mundo"),

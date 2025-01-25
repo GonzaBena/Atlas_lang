@@ -154,14 +154,12 @@ impl Function {
         }
         let result = parse[0].clone();
         let result_type = Types::from_str(&result.to_string());
-
-        if result_type.is_err() || result_type.clone().unwrap() != self.return_type {
-            return Err(FunctionError::DifferentReturnType(format!(
+        match result_type {
+            Ok(value) if value == self.return_type => Ok(parse[0].clone()),
+            _ => Err(FunctionError::DifferentReturnType(format!(
                 " the return type is {:?} and you are returning {:?}",
                 self.return_type, result_type
-            )));
+            ))),
         }
-
-        Ok(parse[0].clone())
     }
 }

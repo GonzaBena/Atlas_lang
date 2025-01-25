@@ -39,7 +39,7 @@ impl Operation {
     pub fn resolve(&mut self) -> Result<Token, ParseError> {
         let left = self.left.clone().resolve()?;
         let right = self.right.clone().resolve()?;
-        let result = self.operator.execute(left, right);
+        let result = self.operator.execute(left, right)?;
         Ok(result)
     }
 }
