@@ -1,9 +1,13 @@
+var int32_1: Int32 = 10
+var int32_2: Int32 = 20
 
+var int64_1: Int64 = 10
+var int64_2: Int64 = 20
 
 var float_1: Float = 10.0
 var float_2: Float = 20.2
 
-
-
+var double_1: Double = 10.0
+var double_2: Double = 20.2
 
 showVars()

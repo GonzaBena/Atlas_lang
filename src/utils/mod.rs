@@ -1,3 +1,5 @@
+pub mod format;
+
 use std::process;
 
 use colored::Colorize;
