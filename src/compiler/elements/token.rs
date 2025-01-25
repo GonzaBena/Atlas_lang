@@ -112,6 +112,24 @@ impl Token {
         }
     }
 
+    pub fn is_valid_value(&self) -> bool {
+        match self {
+            Self::Operator(_)
+            | Self::EOF
+            | Self::StartBrace
+            | Self::StartBracket
+            | Self::StartParenthesis
+            | Self::EndBrace
+            | Self::EndBracket
+            | Self::EndParenthesis
+            | Self::Separator(_)
+            | Self::Void
+            | Self::NewLine
+            | Self::Keyword(_) => false,
+            _ => true,
+        }
+    }
+
     pub fn to(&self, new_type: Types) -> Result<Token, ParseError> {
         match (self, &new_type) {
             (Token::Int32(int32), Types::Int32) => Ok(Token::Int32(*int32)),
