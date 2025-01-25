@@ -26,6 +26,7 @@ pub struct Parser {
 
 #[allow(dead_code)]
 impl Parser {
+    // MARK: Creation
     pub fn new(
         tokens: Vec<Token>,
         variables: Option<Rc<RefCell<VariableTable>>>,
@@ -57,6 +58,7 @@ impl Parser {
         }
     }
 
+    // MARK: Get
     pub fn get_variables(&self) -> Vec<(String, Variable)> {
         self.variables
             .borrow()
@@ -84,6 +86,7 @@ impl Parser {
         result
     }
 
+    // MARK: Parse
     pub fn parse(&mut self) -> Result<Vec<Token>, ParseError> {
         let mut results = Vec::new();
 
@@ -130,390 +133,6 @@ impl Parser {
         }
 
         Ok(results)
-    }
-
-    fn recover_from_error(&mut self) {
-        while self.position < self.tokens.len() {
-            if let Token::NewLine = self.tokens[self.position] {
-                self.position += 1;
-                break;
-            }
-            self.position += 1;
-        }
-    }
-
-    fn function_assignment(&mut self) -> Result<(), ParseError> {
-        self.position += 1;
-        // Esperamos un identificador
-        let identifier = match self.tokens.get(self.position) {
-            Some(Token::Identifier(name)) => {
-                self.position += 1; // Consume el identificador
-                name.to_owned()
-            }
-            _ => {
-                // Si no hay identificador, no podemos seguir
-                return Ok(());
-            }
-        };
-
-        match self.tokens.get(self.position) {
-            Some(Token::StartParenthesis) => {
-                self.position += 1; // Consume el identificador
-            }
-            _ => {
-                // Si no hay identificador, no podemos seguir
-                return Err(ParseError::SyntaxError("Bad Function Definition".into()));
-            }
-        };
-
-        let mut arguments = vec![];
-        while let Some(tok) = self.tokens.get(self.position) {
-            if *tok == Token::EndParenthesis {
-                self.position += 1; // Avanza más allá del `EndParenthesis`
-                break;
-            }
-            arguments.push(tok.clone());
-            self.position += 1;
-        }
-
-        // Verifica que `StartBrace` esté después de los argumentos
-        if self.tokens.get(self.position) != Some(&Token::StartBrace) {
-            return Err(ParseError::SyntaxError(
-                "Expected '{' after function arguments".into(),
-            ));
-        }
-        self.position += 1; // Consume el `StartBrace`
-
-        let mut content = vec![];
-        while let Some(tok) = self.tokens.get(self.position) {
-            if *tok == Token::EndBrace {
-                self.position += 1; // Consume el `EndBrace`
-                break;
-            }
-            content.push(tok.clone());
-            self.position += 1;
-        }
-
-        let mut arg_array: Vec<Argument> = vec![];
-        for x in arguments
-            .split(|x| *x == Token::Separator(','))
-            .map(|x| x.to_owned())
-            .collect::<Vec<Vec<Token>>>()
-            .iter()
-        {
-            if let [name_slice, var_type_slice] = x
-                .split(|x| *x == Token::Separator(':'))
-                .collect::<Vec<&[Token]>>()
-                .as_slice()
-            {
-                // Procesa los elementos de forma segura
-                let name = name_slice.first().ok_or_else(|| {
-                    ParseError::SyntaxError("Argument name missing in function definition".into())
-                })?;
-
-                if let Token::Identifier(_) = name {
-                } else {
-                    return Err(ParseError::SyntaxError("Invalid argument name".into()));
-                };
-
-                if var_type_slice.len() > 1 {
-                    if var_type_slice
-                        .iter()
-                        .find(|x| **x == Token::Operator(Operator::Assign))
-                        .is_some()
-                    {
-                        let var_type = var_type_slice.first().ok_or_else(|| {
-                            ParseError::SyntaxError(
-                                "Argument type missing in function definition".into(),
-                            )
-                        })?;
-
-                        let operator = if let Some(Token::Operator(op)) = var_type_slice.get(1) {
-                            op.clone()
-                        } else {
-                            Operator::Null
-                        };
-
-                        let value = if let Some(token) = var_type_slice.get(2) {
-                            token.clone()
-                        } else {
-                            Token::Void
-                        };
-
-                        if value != Token::Void && operator != Operator::Assign {
-                            return Err(ParseError::SyntaxError(
-                                "Argument assignation operator missing in function definition"
-                                    .into(),
-                            ));
-                        }
-
-                        let name = if let Token::Identifier(id) = name {
-                            id
-                        } else {
-                            return Err(ParseError::SyntaxError(
-                                "Invalid Name of atribbute".to_string(),
-                            ));
-                        };
-
-                        let var_type = if let Token::Type(my_type) = var_type {
-                            my_type.clone()
-                        } else {
-                            return Err(ParseError::SyntaxError(
-                                "Invalid Type of atribbute".to_string(),
-                            ));
-                        };
-
-                        arg_array.push(Argument::new(
-                            name.clone(),
-                            var_type,
-                            Some(Box::new(value)),
-                            None,
-                        ));
-                    } else {
-                        return Err(ParseError::SyntaxError("Invalid argument type".into()));
-                    }
-                } else {
-                    let var_type = var_type_slice.first().ok_or_else(|| {
-                        ParseError::SyntaxError(
-                            "Argument type missing in function definition".into(),
-                        )
-                    })?;
-
-                    let name = if let Token::Identifier(id) = name {
-                        id
-                    } else {
-                        return Err(ParseError::SyntaxError(
-                            "Invalid Name of atribbute".to_string(),
-                        ));
-                    };
-
-                    let var_type = if let Token::Type(my_type) = var_type {
-                        my_type.clone()
-                    } else {
-                        return Err(ParseError::SyntaxError(
-                            "Invalid Type of atribbute".to_string(),
-                        ));
-                    };
-
-                    arg_array.push(Argument::new(name.clone(), var_type, None, None));
-                }
-            } else {
-                return Err(ParseError::SyntaxError("Invalid argument format".into()));
-            }
-        }
-        let mut table = self.functions.borrow_mut();
-        if let Ok(_) = table.get(identifier.as_ref()) {
-            return Err(ParseError::DefinedFunction(identifier.to_string()));
-        } else {
-            table.insert(
-                identifier.as_ref(),
-                Function::new(identifier.clone(), Types::Void, arg_array, content, 0),
-            )?;
-        }
-        return Ok(());
-    }
-
-    fn assignment(&mut self) -> Result<(), ParseError> {
-        let new_var = self.consume_keyword_var();
-        let identifier = self.consume_identifier(new_var)?;
-
-        let var_type = self.consume_type().unwrap_or(Types::Inferred);
-
-        let operator = match self.consume_assignment_operator() {
-            Some(op) => op,
-            None => return Ok(()), // Si no hay operador, la asignación es inválida.
-        };
-        let value_token = self.resolve()?;
-        let inferred_type = Types::inferred(&value_token)?;
-
-        if operator.is_assignation() {
-            self.validate_existing_identifier()?;
-            let mut table = self.variables.borrow_mut();
-            let var = table.get_mut(&identifier)?;
-
-            let existing_value = *var.value.clone();
-            let new_value = match value_token.clone() {
-                Token::Operation(mut expr) => expr.resolve()?,
-                value => operator.execute(existing_value, value)?,
-            };
-
-            let inferred_type = Types::inferred(&new_value)?;
-
-            if inferred_type == var.var_type {
-                var.value = Box::new(new_value);
-            } else {
-                return Err(ParseError::TypeError(format!(
-                    "Cannot assign type '{}' to variable '{}'",
-                    inferred_type, identifier
-                )));
-            }
-            let mut var = var.clone();
-            table.update(identifier.as_ref(), &mut var)?;
-        }
-
-        println!(
-            "new_value: {operator:?}, assignation: {}",
-            operator.is_assignation()
-        );
-        if operator.is_assignation() {
-            self.validate_existing_identifier()?;
-            let mut table = self.variables.borrow_mut();
-            let var = table.get_mut(&identifier)?;
-
-            let existing_value = *var.value.clone();
-            let new_value = match value_token.clone() {
-                Token::Operation(mut expr) => expr.resolve()?,
-                value => operator.execute(existing_value, value)?,
-            };
-
-            let inferred_type = Types::inferred(&new_value)?;
-
-            if inferred_type == var.var_type {
-                var.value = Box::new(new_value);
-            } else {
-                return Err(ParseError::TypeError(format!(
-                    "Cannot assign type '{}' to variable '{}'",
-                    inferred_type, identifier
-                )));
-            }
-            let mut var = var.clone();
-            table.update(identifier.as_ref(), &mut var)?;
-        }
-
-        if operator.is_assignation() {
-            self.handle_variable_reassignment(identifier, value_token, operator, new_var)
-        } else {
-            self.handle_variable_declaration(identifier, value_token, inferred_type, var_type)
-        }
-    }
-
-    fn consume_keyword_var(&mut self) -> bool {
-        if let Token::Keyword(Keyword::Var) = self.tokens[self.position] {
-            self.position += 1;
-            true
-        } else {
-            false
-        }
-    }
-
-    fn consume_identifier(&mut self, new_var: bool) -> Result<String, ParseError> {
-        match self.tokens.get(self.position) {
-            Some(Token::Identifier(name)) => {
-                self.position += 1;
-                Ok(name.to_string())
-            }
-            _ => {
-                if new_var {
-                    Err(ParseError::SyntaxError(
-                        "Unexpected an identifier before assignment operator".into(),
-                    ))
-                } else {
-                    Ok("".into())
-                }
-            }
-        }
-    }
-
-    fn consume_type(&mut self) -> Option<Types> {
-        if let Some(Token::Separator(':')) = self.tokens.get(self.position) {
-            self.position += 1;
-            if let Some(Token::Type(tipo)) = self.tokens.get(self.position) {
-                self.position += 1;
-                return Some(tipo.clone());
-            }
-        }
-        None
-    }
-
-    fn consume_assignment_operator(&mut self) -> Option<Operator> {
-        match self.tokens.get(self.position) {
-            Some(Token::Operator(op)) => {
-                self.position += 1;
-                Some(op.clone())
-            }
-            _ => None,
-        }
-    }
-
-    fn validate_existing_identifier(&mut self) -> Result<String, ParseError> {
-        match self.tokens.get(self.position - 2) {
-            Some(Token::Identifier(id)) => Ok(id.to_string()),
-            _ => Err(ParseError::SyntaxError(
-                "Expected an identifier before assignment operator".into(),
-            )),
-        }
-    }
-
-    fn handle_variable_reassignment(
-        &mut self,
-        identifier: String,
-        value_token: Token,
-        operator: Operator,
-        new_var: bool,
-    ) -> Result<(), ParseError> {
-        let mut table = self.variables.borrow_mut();
-        if let Ok(var) = table.get_mut(&identifier) {
-            let new_value = match value_token {
-                Token::Operation(mut expr) => expr.resolve()?,
-                value => operator.execute(*var.value.clone(), value)?,
-            };
-
-            let inferred_type = Types::inferred(&new_value)?;
-            let mut var = var.clone();
-            if inferred_type == var.var_type {
-                var.value = Box::new(new_value);
-            } else {
-                var.var_type = inferred_type;
-                var.value = Box::new(new_value);
-            }
-
-            table.update(identifier.as_ref(), &mut var)?;
-            Ok(())
-        } else if new_var {
-            Err(ParseError::UndefinedVariable(format!(
-                "Variable {} not defined",
-                identifier
-            )))
-        } else {
-            Err(ParseError::UndefinedVariable(format!(
-                "Variable {} not defined",
-                identifier
-            )))
-        }
-    }
-
-    fn handle_variable_declaration(
-        &mut self,
-        identifier: String,
-        value_token: Token,
-        inferred_type: Types,
-        mut var_type: Types,
-    ) -> Result<(), ParseError> {
-        let mut table = self.variables.borrow_mut();
-
-        let new_value = if inferred_type != var_type {
-            if inferred_type.is_integer() && var_type.is_integer() {
-                Types::transform(value_token, var_type)?.0
-            } else if inferred_type.is_float() && var_type.is_float() {
-                Types::transform(value_token, var_type)?.0
-            } else if var_type == Types::Inferred {
-                var_type = inferred_type;
-                value_token
-            } else {
-                return Err(ParseError::TypeError(format!(
-                    "The type of '{}' must be <{var_type}> but it's <{}>.",
-                    identifier,
-                    Types::from(value_token)
-                )));
-            }
-        } else {
-            value_token
-        };
-
-        let variable = Variable::new(identifier.clone(), var_type, new_value, self.scope);
-        table.insert(identifier.as_ref(), variable)?;
-
-        Ok(())
     }
 
     fn resolve(&mut self) -> Result<Token, ParseError> {
@@ -689,6 +308,400 @@ impl Parser {
                 return Err(ParseError::SyntaxError(msg));
             }
         }
+    }
+
+    // MARK: Errors
+    fn recover_from_error(&mut self) {
+        let sync_tokens = [
+            Token::NewLine,
+            Token::Separator(';'),
+            Token::StartBrace,
+            Token::EndBrace,
+        ];
+
+        while self.position < self.tokens.len() {
+            if sync_tokens.contains(&self.tokens[self.position]) {
+                self.position += 1;
+                break;
+            }
+            self.position += 1;
+        }
+
+        eprintln!("Error recovered at position: {}", self.position);
+    }
+
+    // MARK: Assign
+    fn assignment(&mut self) -> Result<(), ParseError> {
+        let new_var = self.consume_keyword_var();
+        let identifier = self.consume_identifier(new_var)?;
+
+        let var_type = self.consume_type().unwrap_or(Types::Inferred);
+
+        let operator = match self.consume_assignment_operator() {
+            Some(op) => op,
+            None => return Ok(()), // Si no hay operador, la asignación es inválida.
+        };
+        let value_token = self.resolve()?;
+        let inferred_type = Types::inferred(&value_token)?;
+
+        if operator.is_assignation() {
+            self.validate_existing_identifier()?;
+            let mut table = self.variables.borrow_mut();
+            let var = table.get_mut(&identifier)?;
+
+            let existing_value = *var.value.clone();
+            let new_value = match value_token.clone() {
+                Token::Operation(mut expr) => expr.resolve()?,
+                value => operator.execute(existing_value, value)?,
+            };
+
+            let inferred_type = Types::inferred(&new_value)?;
+
+            if inferred_type == var.var_type {
+                var.value = Box::new(new_value);
+            } else {
+                return Err(ParseError::TypeError(format!(
+                    "Cannot assign type '{}' to variable '{}'",
+                    inferred_type, identifier
+                )));
+            }
+            let mut var = var.clone();
+            table.update(identifier.as_ref(), &mut var)?;
+        }
+
+        if operator.is_assignation() {
+            self.validate_existing_identifier()?;
+            let mut table = self.variables.borrow_mut();
+            let var = table.get_mut(&identifier)?;
+
+            let existing_value = *var.value.clone();
+            let new_value = match value_token.clone() {
+                Token::Operation(mut expr) => expr.resolve()?,
+                value => operator.execute(existing_value, value)?,
+            };
+
+            let inferred_type = Types::inferred(&new_value)?;
+
+            if inferred_type == var.var_type {
+                var.value = Box::new(new_value);
+            } else {
+                return Err(ParseError::TypeError(format!(
+                    "Cannot assign type '{}' to variable '{}'",
+                    inferred_type, identifier
+                )));
+            }
+            let mut var = var.clone();
+            table.update(identifier.as_ref(), &mut var)?;
+        }
+
+        if operator.is_assignation() {
+            self.handle_variable_reassignment(identifier, value_token, operator, new_var)
+        } else {
+            self.handle_variable_declaration(identifier, value_token, inferred_type, var_type)
+        }
+    }
+
+    fn handle_variable_reassignment(
+        &mut self,
+        identifier: String,
+        value_token: Token,
+        operator: Operator,
+        new_var: bool,
+    ) -> Result<(), ParseError> {
+        let mut table = self.variables.borrow_mut();
+        if let Ok(var) = table.get_mut(&identifier) {
+            let new_value = match value_token {
+                Token::Operation(mut expr) => expr.resolve()?,
+                value => operator.execute(*var.value.clone(), value)?,
+            };
+
+            let inferred_type = Types::inferred(&new_value)?;
+            let mut var = var.clone();
+            if inferred_type == var.var_type {
+                var.value = Box::new(new_value);
+            } else {
+                var.var_type = inferred_type;
+                var.value = Box::new(new_value);
+            }
+
+            table.update(identifier.as_ref(), &mut var)?;
+            Ok(())
+        } else if new_var {
+            Err(ParseError::UndefinedVariable(format!(
+                "Variable {} not defined",
+                identifier
+            )))
+        } else {
+            Err(ParseError::UndefinedVariable(format!(
+                "Variable {} not defined",
+                identifier
+            )))
+        }
+    }
+
+    fn handle_variable_declaration(
+        &mut self,
+        identifier: String,
+        value_token: Token,
+        inferred_type: Types,
+        mut var_type: Types,
+    ) -> Result<(), ParseError> {
+        let mut table = self.variables.borrow_mut();
+
+        let new_value = if inferred_type != var_type {
+            if inferred_type.is_integer() && var_type.is_integer() {
+                Types::transform(value_token, var_type)?.0
+            } else if inferred_type.is_float() && var_type.is_float() {
+                Types::transform(value_token, var_type)?.0
+            } else if var_type == Types::Inferred {
+                var_type = inferred_type;
+                value_token
+            } else {
+                return Err(ParseError::TypeError(format!(
+                    "The type of '{}' must be <{var_type}> but it's <{}>.",
+                    identifier,
+                    Types::from(value_token)
+                )));
+            }
+        } else {
+            value_token
+        };
+
+        let variable = Variable::new(identifier.clone(), var_type, new_value, self.scope);
+        table.insert(identifier.as_ref(), variable)?;
+
+        Ok(())
+    }
+
+    // MARK: Consume
+    fn consume_keyword_var(&mut self) -> bool {
+        if let Token::Keyword(Keyword::Var) = self.tokens[self.position] {
+            self.position += 1;
+            true
+        } else {
+            false
+        }
+    }
+
+    fn consume_identifier(&mut self, new_var: bool) -> Result<String, ParseError> {
+        match self.tokens.get(self.position) {
+            Some(Token::Identifier(name)) => {
+                self.position += 1;
+                Ok(name.to_string())
+            }
+            _ => {
+                if new_var {
+                    Err(ParseError::SyntaxError(
+                        "Unexpected an identifier before assignment operator".into(),
+                    ))
+                } else {
+                    Ok("".into())
+                }
+            }
+        }
+    }
+
+    fn consume_type(&mut self) -> Option<Types> {
+        if let Some(Token::Separator(':')) = self.tokens.get(self.position) {
+            self.position += 1;
+            if let Some(Token::Type(tipo)) = self.tokens.get(self.position) {
+                self.position += 1;
+                return Some(tipo.clone());
+            }
+        }
+        None
+    }
+
+    fn consume_assignment_operator(&mut self) -> Option<Operator> {
+        match self.tokens.get(self.position) {
+            Some(Token::Operator(op)) => {
+                self.position += 1;
+                Some(op.clone())
+            }
+            _ => None,
+        }
+    }
+
+    // MARK: Auxiliary
+    fn validate_existing_identifier(&mut self) -> Result<String, ParseError> {
+        match self.tokens.get(self.position - 2) {
+            Some(Token::Identifier(id)) => Ok(id.to_string()),
+            _ => Err(ParseError::SyntaxError(
+                "Expected an identifier before assignment operator".into(),
+            )),
+        }
+    }
+
+    // MARK: Functions
+    fn function_assignment(&mut self) -> Result<(), ParseError> {
+        self.position += 1;
+        // Esperamos un identificador
+        let identifier = match self.tokens.get(self.position) {
+            Some(Token::Identifier(name)) => {
+                self.position += 1; // Consume el identificador
+                name.to_owned()
+            }
+            _ => {
+                // Si no hay identificador, no podemos seguir
+                return Ok(());
+            }
+        };
+
+        match self.tokens.get(self.position) {
+            Some(Token::StartParenthesis) => {
+                self.position += 1; // Consume el identificador
+            }
+            _ => {
+                // Si no hay identificador, no podemos seguir
+                return Err(ParseError::SyntaxError("Bad Function Definition".into()));
+            }
+        };
+
+        let mut arguments = vec![];
+        while let Some(tok) = self.tokens.get(self.position) {
+            if *tok == Token::EndParenthesis {
+                self.position += 1; // Avanza más allá del `EndParenthesis`
+                break;
+            }
+            arguments.push(tok.clone());
+            self.position += 1;
+        }
+
+        // Verifica que `StartBrace` esté después de los argumentos
+        if self.tokens.get(self.position) != Some(&Token::StartBrace) {
+            return Err(ParseError::SyntaxError(
+                "Expected '{' after function arguments".into(),
+            ));
+        }
+        self.position += 1; // Consume el `StartBrace`
+
+        let mut content = vec![];
+        while let Some(tok) = self.tokens.get(self.position) {
+            if *tok == Token::EndBrace {
+                self.position += 1; // Consume el `EndBrace`
+                break;
+            }
+            content.push(tok.clone());
+            self.position += 1;
+        }
+
+        let mut arg_array: Vec<Argument> = vec![];
+        for x in arguments
+            .split(|x| *x == Token::Separator(','))
+            .map(|x| x.to_owned())
+            .collect::<Vec<Vec<Token>>>()
+            .iter()
+        {
+            if let [name_slice, var_type_slice] = x
+                .split(|x| *x == Token::Separator(':'))
+                .collect::<Vec<&[Token]>>()
+                .as_slice()
+            {
+                // Procesa los elementos de forma segura
+                let name = name_slice.first().ok_or_else(|| {
+                    ParseError::SyntaxError("Argument name missing in function definition".into())
+                })?;
+
+                if let Token::Identifier(_) = name {
+                } else {
+                    return Err(ParseError::SyntaxError("Invalid argument name".into()));
+                };
+
+                if var_type_slice.len() > 1 {
+                    if var_type_slice
+                        .iter()
+                        .find(|x| **x == Token::Operator(Operator::Assign))
+                        .is_some()
+                    {
+                        let var_type = var_type_slice.first().ok_or_else(|| {
+                            ParseError::SyntaxError(
+                                "Argument type missing in function definition".into(),
+                            )
+                        })?;
+
+                        let operator = if let Some(Token::Operator(op)) = var_type_slice.get(1) {
+                            op.clone()
+                        } else {
+                            Operator::Null
+                        };
+
+                        let value = if let Some(token) = var_type_slice.get(2) {
+                            token.clone()
+                        } else {
+                            Token::Void
+                        };
+
+                        if value != Token::Void && operator != Operator::Assign {
+                            return Err(ParseError::SyntaxError(
+                                "Argument assignation operator missing in function definition"
+                                    .into(),
+                            ));
+                        }
+
+                        let name = if let Token::Identifier(id) = name {
+                            id
+                        } else {
+                            return Err(ParseError::SyntaxError(
+                                "Invalid Name of atribbute".to_string(),
+                            ));
+                        };
+
+                        let var_type = if let Token::Type(my_type) = var_type {
+                            my_type.clone()
+                        } else {
+                            return Err(ParseError::SyntaxError(
+                                "Invalid Type of atribbute".to_string(),
+                            ));
+                        };
+
+                        arg_array.push(Argument::new(
+                            name.clone(),
+                            var_type,
+                            Some(Box::new(value)),
+                            None,
+                        ));
+                    } else {
+                        return Err(ParseError::SyntaxError("Invalid argument type".into()));
+                    }
+                } else {
+                    let var_type = var_type_slice.first().ok_or_else(|| {
+                        ParseError::SyntaxError(
+                            "Argument type missing in function definition".into(),
+                        )
+                    })?;
+
+                    let name = if let Token::Identifier(id) = name {
+                        id
+                    } else {
+                        return Err(ParseError::SyntaxError(
+                            "Invalid Name of atribbute".to_string(),
+                        ));
+                    };
+
+                    let var_type = if let Token::Type(my_type) = var_type {
+                        my_type.clone()
+                    } else {
+                        return Err(ParseError::SyntaxError(
+                            "Invalid Type of atribbute".to_string(),
+                        ));
+                    };
+
+                    arg_array.push(Argument::new(name.clone(), var_type, None, None));
+                }
+            } else {
+                return Err(ParseError::SyntaxError("Invalid argument format".into()));
+            }
+        }
+        let mut table = self.functions.borrow_mut();
+        if let Ok(_) = table.get(identifier.as_ref()) {
+            return Err(ParseError::DefinedFunction(identifier.to_string()));
+        } else {
+            table.insert(
+                identifier.as_ref(),
+                Function::new(identifier.clone(), Types::Void, arg_array, content, 0),
+            )?;
+        }
+        return Ok(());
     }
 
     fn process_function_call(&self, var: &str, args: Vec<Argument>) -> Result<Token, ParseError> {
