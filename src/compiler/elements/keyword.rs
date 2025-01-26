@@ -4,6 +4,30 @@ use serde::Serialize;
 
 use crate::compiler::error::lexic_error::LexicError;
 
+/// The `Keyword` enum represents various keywords in the Atlas language.
+///
+/// # Variants
+///
+/// - `Var`: Represents the `var` keyword.
+/// - `Const`: Represents the `const` keyword.
+/// - `For`: Represents the `for` keyword.
+/// - `While`: Represents the `while` keyword.
+/// - `If`: Represents the `if` keyword.
+/// - `Else`: Represents the `else` keyword.
+/// - `Function`: Represents the `func` keyword.
+/// - `EOF`: Represents the end of file.
+/// - `True`: Represents the `true` keyword or a true boolean value.
+/// - `False`: Represents the `false` keyword or a false boolean value.
+///
+/// # Example
+///
+/// ```
+/// use crate::compiler::elements::keyword::Keyword;
+/// use std::str::FromStr;
+///
+/// let keyword = Keyword::from_str("var").unwrap();
+/// assert_eq!(keyword, Keyword::Var);
+/// ```
 #[derive(Debug, Serialize, Clone, PartialEq, Eq)]
 #[allow(dead_code)]
 pub enum Keyword {

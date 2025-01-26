@@ -11,7 +11,6 @@ pub struct Float {
     data: f32,
 }
 
-#[allow(dead_code)]
 impl Float {
     pub fn new(num: f32) -> Self {
         Self { data: num }
@@ -48,12 +47,6 @@ impl Into<f32> for Float {
     }
 }
 
-// impl From<f32> for Float {
-//     fn from(value: f32) -> Self {
-//         Self { data: value }
-//     }
-// }
-
 impl<T> From<T> for Float
 where
     T: ToPrimitive,
@@ -64,32 +57,44 @@ where
     }
 }
 
-impl Add for Float {
+// impl Add for Float {
+//     type Output = Self;
+
+//     fn add(self, rhs: Self) -> Self::Output {
+//         let result = *self + *rhs;
+//         Self { data: result }
+//     }
+// }
+
+impl<T> Add<T> for Float
+where
+    T: Into<f32>,
+{
     type Output = Self;
 
-    fn add(self, rhs: Self) -> Self::Output {
-        let result = *self + *rhs;
+    fn add(self, rhs: T) -> Self::Output {
+        let result = *self + rhs.into();
         Self { data: result }
     }
 }
 
-impl Add<Int32> for Float {
-    type Output = Int32;
+// impl Add<Int32> for Float {
+//     type Output = Self;
 
-    fn add(self, rhs: Int32) -> Self::Output {
-        let result = *self as i32 - *rhs;
-        Self::Output::new(result)
-    }
-}
+//     fn add(self, rhs: Int32) -> Self::Output {
+//         let result = *self - *rhs as f32;
+//         Self::Output::new(result)
+//     }
+// }
 
-impl Add<Int64> for Float {
-    type Output = Self;
+// impl Add<Int64> for Float {
+//     type Output = Self;
 
-    fn add(self, rhs: Int64) -> Self::Output {
-        let result = *self + *rhs as f32;
-        Self::Output::new(result)
-    }
-}
+//     fn add(self, rhs: Int64) -> Self::Output {
+//         let result = *self + *rhs as f32;
+//         Self::Output::new(result)
+//     }
+// }
 
 impl AddAssign for Float {
     fn add_assign(&mut self, rhs: Self) {

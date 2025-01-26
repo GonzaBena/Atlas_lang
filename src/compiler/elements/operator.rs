@@ -1,4 +1,7 @@
-use crate::compiler::{error::parse_error::ParseError, types::Types};
+use crate::{
+    compiler::{error::parse_error::ParseError, types::Types},
+    types::basic::number::{double::Double, float::Float, int32::Int32, int64::Int64},
+};
 
 use super::token::Token;
 
@@ -83,7 +86,7 @@ impl ToString for Operator {
 
 #[allow(dead_code)]
 impl Operator {
-    pub fn execute<'a>(&self, left: Token, right: Token) -> Result<Token, ParseError> {
+    pub fn execute(&self, left: Token, right: Token) -> Result<Token, ParseError> {
         let mut left = left;
         let mut right = right;
         if let Token::Operation(mut op) = left {
@@ -95,37 +98,113 @@ impl Operator {
 
         match self {
             Self::Add | Self::AddAssign => match (left, right) {
-                (Token::Int32(num1), Token::Int32(num2)) => {
-                    Ok(Token::to_number(num1 + num2, Types::Int32))
+                (Token::Int32(val1), Token::Int32(val2)) => {
+                    Self::add_integer_integer(Integer::Int32(val1), Integer::Int32(val2))
                 }
-                (Token::Double(num1), Token::Double(num2)) => {
-                    Ok(Token::to_number(num1 + num2, Types::Double))
+                (Token::Int32(val1), Token::Int64(val2)) => {
+                    Self::add_integer_integer(Integer::Int32(val1), Integer::Int64(val2))
                 }
-                (Token::Double(num1), Token::Int32(num2)) => {
-                    Ok(Token::to_number(num1 + num2, Types::Double))
+                (Token::Int32(val1), Token::Float(val2)) => {
+                    Self::add_integer_decimal(Number::Int32(val1), Number::Float(val2))
                 }
-                (Token::Int32(num1), Token::Double(num2)) => {
-                    Ok(Token::to_number(num1 + num2, Types::Double))
+                (Token::Int32(val1), Token::Double(val2)) => {
+                    Self::add_integer_decimal(Number::Int32(val1), Number::Double(val2))
                 }
-
-                (Token::Int32(int32), Token::Int64(int64)) => {
-                    Ok(Token::to_number(int32 + int64, Types::Int64))
+                (Token::Int32(val1), Token::String(val2)) => {
+                    Self::add_number_string(val1.to_string(), val2)
                 }
-
-                // MARK: ------ Int64 ------
-                (Token::Int64(int64), Token::Int32(int32)) => {
-                    Ok(Token::to_number(int32 + int64, Types::Int64))
+                (Token::Int32(val1), Token::Str(val2)) => {
+                    Self::add_number_string(val1.to_string(), val2.to_string())
                 }
-                (Token::Int64(int64), Token::Int64(int64_2)) => {
-                    Ok(Token::to_number(int64 + int64_2, Types::Int64))
+                (Token::Int64(val1), Token::Int32(val2)) => {
+                    Self::add_integer_integer(Integer::Int64(val1), Integer::Int32(val2))
                 }
-                (Token::Int64(int64), Token::Double(double)) => {
-                    Ok(Token::to_number(int64 + double, Types::Double))
+                (Token::Int64(val1), Token::Int64(val2)) => {
+                    Self::add_integer_integer(Integer::Int64(val1), Integer::Int64(val2))
                 }
-
-                // MARK: ------ Double ------
-                (Token::Double(double), Token::Int64(int64)) => {
-                    Ok(Token::to_number(double + int64, Types::Int64))
+                (Token::Int64(val1), Token::Float(val2)) => {
+                    Self::add_integer_decimal(Number::Int64(val1), Number::Float(val2))
+                }
+                (Token::Int64(val1), Token::Double(val2)) => {
+                    Self::add_integer_decimal(Number::Int64(val1), Number::Double(val2))
+                }
+                (Token::Int64(val1), Token::String(val2)) => {
+                    Self::add_number_string(val1.to_string(), val2)
+                }
+                (Token::Int64(val1), Token::Str(val2)) => {
+                    Self::add_number_string(val1.to_string(), val2.to_string())
+                }
+                (Token::Float(val1), Token::Int32(val2)) => {
+                    Self::add_integer_decimal(Number::Float(val1), Number::Int32(val2))
+                }
+                (Token::Float(val1), Token::Int64(val2)) => {
+                    Self::add_integer_decimal(Number::Float(val1), Number::Int64(val2))
+                }
+                (Token::Float(val1), Token::Float(val2)) => {
+                    Self::add_decimal_decimal(Decimal::Float(val1), Decimal::Float(val2))
+                }
+                (Token::Float(val1), Token::Double(val2)) => {
+                    Self::add_decimal_decimal(Decimal::Float(val1), Decimal::Double(val2))
+                }
+                (Token::Float(val1), Token::String(val2)) => {
+                    Self::add_number_string(val1.to_string(), val2)
+                }
+                (Token::Float(val1), Token::Str(val2)) => {
+                    Self::add_number_string(val1.to_string(), val2.to_string())
+                }
+                (Token::Double(val1), Token::Int32(val2)) => {
+                    Self::add_integer_decimal(Number::Double(val1), Number::Int32(val2))
+                }
+                (Token::Double(val1), Token::Int64(val2)) => {
+                    Self::add_integer_decimal(Number::Double(val1), Number::Int64(val2))
+                }
+                (Token::Double(val1), Token::Float(val2)) => {
+                    Self::add_decimal_decimal(Decimal::Double(val1), Decimal::Float(val2))
+                }
+                (Token::Double(val1), Token::Double(val2)) => {
+                    Self::add_decimal_decimal(Decimal::Double(val1), Decimal::Double(val2))
+                }
+                (Token::Double(val1), Token::String(val2)) => {
+                    Self::add_number_string(val1.to_string(), val2)
+                }
+                (Token::Double(val1), Token::Str(val2)) => {
+                    Self::add_number_string(val1.to_string(), val2.to_string())
+                }
+                (Token::String(val1), Token::Int32(val2)) => {
+                    Self::add_number_string(val1, val2.to_string())
+                }
+                (Token::String(val1), Token::Int64(val2)) => {
+                    Self::add_number_string(val1, val2.to_string())
+                }
+                (Token::String(val1), Token::Float(val2)) => {
+                    Self::add_number_string(val1, val2.to_string())
+                }
+                (Token::String(val1), Token::Double(val2)) => {
+                    Self::add_number_string(val1, val2.to_string())
+                }
+                (Token::String(val1), Token::String(val2)) => {
+                    Self::add_number_string(val1, val2.to_string())
+                }
+                (Token::String(val1), Token::Str(val2)) => {
+                    Self::add_number_string(val1.to_string(), val2.to_string())
+                }
+                (Token::Str(val1), Token::Int32(val2)) => {
+                    Self::add_number_string(val1.to_string(), val2.to_string())
+                }
+                (Token::Str(val1), Token::Int64(val2)) => {
+                    Self::add_number_string(val1.to_string(), val2.to_string())
+                }
+                (Token::Str(val1), Token::Float(val2)) => {
+                    Self::add_number_string(val1.to_string(), val2.to_string())
+                }
+                (Token::Str(val1), Token::Double(val2)) => {
+                    Self::add_number_string(val1.to_string(), val2.to_string())
+                }
+                (Token::Str(val1), Token::String(val2)) => {
+                    Self::add_number_string(val1.to_string(), val2.to_string())
+                }
+                (Token::Str(val1), Token::Str(val2)) => {
+                    Self::add_number_string(val1.to_string(), val2.to_string())
                 }
 
                 (left, right) => Err(ParseError::InvalidOperation {
@@ -136,17 +215,53 @@ impl Operator {
             },
 
             Self::Sub | Self::SubAssign => match (left, right) {
-                (Token::Int32(num1), Token::Int32(num2)) => {
-                    Ok(Token::to_number(num1 - num2, Types::Int32))
+                (Token::Int32(val1), Token::Int32(val2)) => {
+                    Self::sub_integer_integer(Integer::Int32(val1), Integer::Int32(val2))
                 }
-                (Token::Double(num1), Token::Double(num2)) => {
-                    Ok(Token::to_number(num1 - num2, Types::Double))
+                (Token::Int32(val1), Token::Int64(val2)) => {
+                    Self::sub_integer_integer(Integer::Int32(val1), Integer::Int64(val2))
                 }
-                (Token::Double(num1), Token::Int32(num2)) => {
-                    Ok(Token::to_number(num1 - num2, Types::Double))
+                (Token::Int32(val1), Token::Float(val2)) => {
+                    Self::sub_integer_decimal(Number::Int32(val1), Number::Float(val2))
                 }
-                (Token::Int32(num1), Token::Double(num2)) => {
-                    Ok(Token::to_number(num1 - num2, Types::Double))
+                (Token::Int32(val1), Token::Double(val2)) => {
+                    Self::sub_integer_decimal(Number::Int32(val1), Number::Double(val2))
+                }
+                (Token::Int64(val1), Token::Int32(val2)) => {
+                    Self::sub_integer_integer(Integer::Int64(val1), Integer::Int32(val2))
+                }
+                (Token::Int64(val1), Token::Int64(val2)) => {
+                    Self::sub_integer_integer(Integer::Int64(val1), Integer::Int64(val2))
+                }
+                (Token::Int64(val1), Token::Float(val2)) => {
+                    Self::sub_integer_decimal(Number::Int64(val1), Number::Float(val2))
+                }
+                (Token::Int64(val1), Token::Double(val2)) => {
+                    Self::sub_integer_decimal(Number::Int64(val1), Number::Double(val2))
+                }
+                (Token::Float(val1), Token::Int32(val2)) => {
+                    Self::sub_integer_decimal(Number::Float(val1), Number::Int32(val2))
+                }
+                (Token::Float(val1), Token::Int64(val2)) => {
+                    Self::sub_integer_decimal(Number::Float(val1), Number::Int64(val2))
+                }
+                (Token::Float(val1), Token::Float(val2)) => {
+                    Self::sub_decimal_decimal(Decimal::Float(val1), Decimal::Float(val2))
+                }
+                (Token::Float(val1), Token::Double(val2)) => {
+                    Self::sub_decimal_decimal(Decimal::Float(val1), Decimal::Double(val2))
+                }
+                (Token::Double(val1), Token::Int32(val2)) => {
+                    Self::sub_integer_decimal(Number::Double(val1), Number::Int32(val2))
+                }
+                (Token::Double(val1), Token::Int64(val2)) => {
+                    Self::sub_integer_decimal(Number::Double(val1), Number::Int64(val2))
+                }
+                (Token::Double(val1), Token::Float(val2)) => {
+                    Self::sub_decimal_decimal(Decimal::Double(val1), Decimal::Float(val2))
+                }
+                (Token::Double(val1), Token::Double(val2)) => {
+                    Self::sub_decimal_decimal(Decimal::Double(val1), Decimal::Double(val2))
                 }
                 (left, right) => Err(ParseError::InvalidOperation {
                     operation: self.to_string(),
@@ -222,35 +337,35 @@ impl Operator {
                 match (left, right) {
                     // MARK: ------ Int32 ------
                     (Token::Int32(num1), Token::Int32(num2)) => {
-                        Ok(Token::Int32((num1 / num2).ceil().into()))
+                        Ok(Token::Int32(Int32::from((num1 / num2).ceil() as i32)))
                     }
                     (Token::Int32(num1), Token::Int64(num2)) => {
-                        Ok(Token::Int32((num1 / num2).ceil().into()))
+                        Ok(Token::Int32(Int32::from((num1 / num2).ceil() as i32)))
                     }
                     (Token::Int32(num1), Token::Double(num2)) => {
-                        Ok(Token::Int32((num1 / num2).ceil().into()))
+                        Ok(Token::Int32(Int32::from((num1 / num2).ceil() as i32)))
                     }
 
                     // MARK: ------ Int64 ------
                     (Token::Int64(num1), Token::Int32(num2)) => {
-                        Ok(Token::Int32((num1 / num2).ceil().into()))
+                        Ok(Token::Int32(Int32::from((num1 / num2).ceil() as i32)))
                     }
                     (Token::Int64(num1), Token::Int64(num2)) => {
-                        Ok(Token::Int32((num1 / num2).ceil().into()))
+                        Ok(Token::Int32(Int32::from((num1 / num2).ceil() as i32)))
                     }
                     (Token::Int64(num1), Token::Double(num2)) => {
-                        Ok(Token::Int32((num1 / num2).ceil().into()))
+                        Ok(Token::Int32(Int32::from((num1 / num2).ceil() as i32)))
                     }
 
                     // MARK: ------ Double ------
                     (Token::Double(num1), Token::Int32(num2)) => {
-                        Ok(Token::Int32((num1 / num2).ceil().into()))
+                        Ok(Token::Int32(Int32::from((num1 / num2).ceil() as i32)))
                     }
                     (Token::Double(num1), Token::Int64(num2)) => {
-                        Ok(Token::Int32((num1 / num2).ceil().into()))
+                        Ok(Token::Int32(Int32::from((num1 / num2).ceil() as i32)))
                     }
                     (Token::Double(num1), Token::Double(num2)) => {
-                        Ok(Token::Int32((num1 / num2).ceil().into()))
+                        Ok(Token::Int32(Int32::from((num1 / num2).ceil() as i32)))
                     }
 
                     (left, right) => Err(ParseError::InvalidOperation {
@@ -277,6 +392,170 @@ impl Operator {
         }
     }
 
+    fn add_integer_integer(left: Integer, right: Integer) -> Result<Token, ParseError> {
+        match (left, right) {
+            (Integer::Int32(num_1), Integer::Int32(num_2)) => Ok(Token::Int32(num_1 + num_2)),
+            (Integer::Int32(num_1), Integer::Int64(num_2)) => {
+                Ok(Token::Int32(num_1 + (*num_2 as i32)))
+            }
+            (Integer::Int64(num_1), Integer::Int32(num_2)) => Ok(Token::Int64(num_1 + num_2)),
+            (Integer::Int64(num_1), Integer::Int64(num_2)) => Ok(Token::Int64(num_1 + num_2)),
+        }
+    }
+
+    fn add_integer_decimal(left: Number, right: Number) -> Result<Token, ParseError> {
+        match (left, right) {
+            (Number::Int32(num1), Number::Int32(num2)) => {
+                Self::add_integer_integer(Integer::Int32(num1), Integer::Int32(num2))
+            }
+            (Number::Int32(num1), Number::Int64(num2)) => {
+                Self::add_integer_integer(Integer::Int32(num1), Integer::Int64(num2))
+            }
+            (Number::Int32(num1), Number::Float(num2)) => {
+                Ok(Token::Float(Float::new(*num1 as f32) + num2))
+            }
+            (Number::Int32(num1), Number::Double(num2)) => {
+                Ok(Token::Double(Double::new((*num1).into()) + num2))
+            }
+
+            (Number::Int64(num1), Number::Int32(num2)) => {
+                Self::add_integer_integer(Integer::Int64(num1), Integer::Int32(num2))
+            }
+            (Number::Int64(num1), Number::Int64(num2)) => {
+                Self::add_integer_integer(Integer::Int64(num1), Integer::Int64(num2))
+            }
+            (Number::Int64(num1), Number::Float(num2)) => {
+                Ok(Token::Float(Float::new(*num1 as f32) + num2))
+            }
+            (Number::Int64(num1), Number::Double(num2)) => {
+                Ok(Token::Double(Double::new(num1.into()) + num2))
+            }
+
+            (Number::Float(num1), Number::Int32(num2)) => {
+                Ok(Token::Float(num1 + Float::new(*num2 as f32)))
+            }
+            (Number::Float(num1), Number::Int64(num2)) => {
+                Ok(Token::Float(num1 + Float::new(*num2 as f32)))
+            }
+            (Number::Float(num1), Number::Float(num2)) => {
+                Self::add_decimal_decimal(Decimal::Float(num1), Decimal::Float(num2))
+            }
+            (Number::Float(num1), Number::Double(num2)) => {
+                Self::add_decimal_decimal(Decimal::Float(num1), Decimal::Double(num2))
+            }
+
+            (Number::Double(num1), Number::Int32(num2)) => {
+                Ok(Token::Double(num1 + Double::new(*num2 as f64)))
+            }
+            (Number::Double(num1), Number::Int64(num2)) => {
+                Ok(Token::Double(num1 + Double::new(*num2 as f64)))
+            }
+            (Number::Double(num1), Number::Float(num2)) => {
+                Self::add_decimal_decimal(Decimal::Double(num1), Decimal::Float(num2))
+            }
+            (Number::Double(num1), Number::Double(num2)) => {
+                Self::add_decimal_decimal(Decimal::Double(num1), Decimal::Double(num2))
+            }
+        }
+    }
+
+    fn add_decimal_decimal(left: Decimal, right: Decimal) -> Result<Token, ParseError> {
+        match (left, right) {
+            (Decimal::Float(num1), Decimal::Float(num2)) => Ok(Token::Float(num1 + num2)),
+            (Decimal::Float(num1), Decimal::Double(num2)) => {
+                Ok(Token::Float(num1 + Float::from(*num2)))
+            }
+            (Decimal::Double(num1), Decimal::Float(num2)) => {
+                Ok(Token::Double(num1 + Double::from(*num2)))
+            }
+            (Decimal::Double(num1), Decimal::Double(num2)) => Ok(Token::Double(num1 + num2)),
+        }
+    }
+
+    fn add_number_string(left: String, right: String) -> Result<Token, ParseError> {
+        Ok(Token::String(left + right.as_str()))
+    }
+
+    fn sub_integer_integer(left: Integer, right: Integer) -> Result<Token, ParseError> {
+        match (left, right) {
+            (Integer::Int32(num_1), Integer::Int32(num_2)) => Ok(Token::Int32(num_1 - num_2)),
+            (Integer::Int32(num_1), Integer::Int64(num_2)) => {
+                Ok(Token::Int32(num_1 - (*num_2 as i32)))
+            }
+            (Integer::Int64(num_1), Integer::Int32(num_2)) => Ok(Token::Int64(num_1 - num_2)),
+            (Integer::Int64(num_1), Integer::Int64(num_2)) => Ok(Token::Int64(num_1 - num_2)),
+        }
+    }
+
+    fn sub_integer_decimal(left: Number, right: Number) -> Result<Token, ParseError> {
+        match (left, right) {
+            (Number::Int32(num1), Number::Int32(num2)) => {
+                Self::sub_integer_integer(Integer::Int32(num1), Integer::Int32(num2))
+            }
+            (Number::Int32(num1), Number::Int64(num2)) => {
+                Self::sub_integer_integer(Integer::Int32(num1), Integer::Int64(num2))
+            }
+            (Number::Int32(num1), Number::Float(num2)) => {
+                Ok(Token::Float(Float::new(*num1 as f32) - num2))
+            }
+            (Number::Int32(num1), Number::Double(num2)) => {
+                Ok(Token::Double(Double::new((*num1).into()) - num2))
+            }
+
+            (Number::Int64(num1), Number::Int32(num2)) => {
+                Self::sub_integer_integer(Integer::Int64(num1), Integer::Int32(num2))
+            }
+            (Number::Int64(num1), Number::Int64(num2)) => {
+                Self::sub_integer_integer(Integer::Int64(num1), Integer::Int64(num2))
+            }
+            (Number::Int64(num1), Number::Float(num2)) => {
+                Ok(Token::Float(Float::new(*num1 as f32) - num2))
+            }
+            (Number::Int64(num1), Number::Double(num2)) => {
+                Ok(Token::Double(Double::new(num1.into()) - num2))
+            }
+
+            (Number::Float(num1), Number::Int32(num2)) => {
+                Ok(Token::Float(num1 - Float::new(*num2 as f32)))
+            }
+            (Number::Float(num1), Number::Int64(num2)) => {
+                Ok(Token::Float(num1 - Float::new(*num2 as f32)))
+            }
+            (Number::Float(num1), Number::Float(num2)) => {
+                Self::sub_decimal_decimal(Decimal::Float(num1), Decimal::Float(num2))
+            }
+            (Number::Float(num1), Number::Double(num2)) => {
+                Self::sub_decimal_decimal(Decimal::Float(num1), Decimal::Double(num2))
+            }
+
+            (Number::Double(num1), Number::Int32(num2)) => {
+                Ok(Token::Double(num1 - Double::new(*num2 as f64)))
+            }
+            (Number::Double(num1), Number::Int64(num2)) => {
+                Ok(Token::Double(num1 - Double::new(*num2 as f64)))
+            }
+            (Number::Double(num1), Number::Float(num2)) => {
+                Self::sub_decimal_decimal(Decimal::Double(num1), Decimal::Float(num2))
+            }
+            (Number::Double(num1), Number::Double(num2)) => {
+                Self::sub_decimal_decimal(Decimal::Double(num1), Decimal::Double(num2))
+            }
+        }
+    }
+
+    fn sub_decimal_decimal(left: Decimal, right: Decimal) -> Result<Token, ParseError> {
+        match (left, right) {
+            (Decimal::Float(num1), Decimal::Float(num2)) => Ok(Token::Float(num1 - num2)),
+            (Decimal::Float(num1), Decimal::Double(num2)) => {
+                Ok(Token::Float(num1 - Float::from(*num2)))
+            }
+            (Decimal::Double(num1), Decimal::Float(num2)) => {
+                Ok(Token::Double(num1 - Double::from(*num2)))
+            }
+            (Decimal::Double(num1), Decimal::Double(num2)) => Ok(Token::Double(num1 - num2)),
+        }
+    }
+
     pub fn is_assignation(&self) -> bool {
         match self {
             Self::AddAssign
@@ -289,4 +568,21 @@ impl Operator {
             _ => false,
         }
     }
+}
+
+enum Integer {
+    Int32(Int32),
+    Int64(Int64),
+}
+
+enum Decimal {
+    Float(Float),
+    Double(Double),
+}
+
+enum Number {
+    Int32(Int32),
+    Int64(Int64),
+    Float(Float),
+    Double(Double),
 }

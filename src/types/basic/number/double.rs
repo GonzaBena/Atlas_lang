@@ -3,6 +3,7 @@ use std::ops::{Add, AddAssign, Deref, DerefMut, Div, Mul, Rem, Sub};
 
 use super::int32::Int32;
 use super::int64::Int64;
+use super::Number;
 use num::ToPrimitive;
 use serde::Serialize;
 
@@ -48,46 +49,79 @@ impl Into<f64> for Double {
     }
 }
 
-// impl From<f64> for Double {
-//     fn from(value: f64) -> Self {
-//         Self { data: value }
-//     }
-// }
+impl ToPrimitive for Double {
+    fn to_i64(&self) -> Option<i64> {
+        self.data.to_i64()
+    }
 
-impl<T> From<T> for Double
+    fn to_u64(&self) -> Option<u64> {
+        self.data.to_u64()
+    }
+
+    fn to_f64(&self) -> Option<f64> {
+        Some(self.data)
+    }
+}
+
+impl Double {
+    pub fn from<T: Into<f64>>(value: T) -> Self {
+        Self { data: value.into() }
+    }
+}
+
+impl Number for Double {
+    type Number = Self;
+    type Output = Self;
+
+    fn add<T: Number>(&self, other: T) -> Self::Output {
+        Self::new(**self + other.to_f64().unwrap())
+    }
+
+    fn sub<T: Number>(&self, other: T) -> Self::Output {
+        Self::new(**self - other.to_f64().unwrap())
+    }
+
+    fn mul<T: Number>(&self, other: T) -> Self::Output {
+        Self::new(**self * other.to_f64().unwrap())
+    }
+
+    fn div<T: Number>(&self, other: T) -> Self::Output {
+        Self::new(**self / other.to_f64().unwrap())
+    }
+
+    fn module<T: Number>(&self, other: T) -> Self::Output {
+        let result = **self % other.to_f64().unwrap();
+        Self::new(result)
+    }
+
+    fn abs<T: Number>(&self) -> Self::Number {
+        Self::new((**self).abs())
+    }
+
+    fn power<T: Into<i32> + PartialOrd<i32> + Clone>(&self, other: T) -> Self::Output {
+        let mut result = **self;
+
+        if other <= 1 {
+            return Self::Output::new(result);
+        }
+
+        for _ in 2..=(other.clone().into()) {
+            result = result.powi(other.clone().into());
+        }
+
+        Self::Output::new(result)
+    }
+}
+
+impl<T> Add<T> for Double
 where
-    T: ToPrimitive,
+    T: Into<f64> + TryInto<f64>,
 {
-    fn from(value: T) -> Self {
-        let val: f64 = T::to_f64(&value).unwrap();
-        Self { data: val }
-    }
-}
-
-impl Add for Double {
     type Output = Self;
 
-    fn add(self, rhs: Self) -> Self::Output {
-        let result = *self + *rhs;
+    fn add(self, rhs: T) -> Self::Output {
+        let result = *self + rhs.into();
         Self { data: result }
-    }
-}
-
-impl Add<Int32> for Double {
-    type Output = Int32;
-
-    fn add(self, rhs: Int32) -> Self::Output {
-        let result = *self as i32 - *rhs;
-        Self::Output::new(result)
-    }
-}
-
-impl Add<Int64> for Double {
-    type Output = Self;
-
-    fn add(self, rhs: Int64) -> Self::Output {
-        let result = *self + *rhs as f64;
-        Self::Output::new(result)
     }
 }
 

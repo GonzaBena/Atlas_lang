@@ -1,19 +1,11 @@
-use std::{error::Error, fmt};
+use thiserror::Error;
 
-#[derive(Debug)]
+/// This error covers all about CLI
+#[derive(Debug, Error)]
 pub enum CLIError {
+    #[error("The route doesn't exists or it's a directory.")]
     InvalidPath,
+
+    #[error("The extension have to be .atlas or .atl.")]
     InvalidExtension,
 }
-
-impl fmt::Display for CLIError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::InvalidPath => write!(f, "The route doesn't exists or it's a directory."),
-            Self::InvalidExtension => write!(f, "The extension have to be .atlas or .atl."),
-            // v => write!(f, "CLIError: {v}"),
-        }
-    }
-}
-
-impl Error for CLIError {}

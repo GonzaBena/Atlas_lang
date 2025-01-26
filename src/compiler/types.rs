@@ -85,7 +85,7 @@ impl Types {
         match (to, value) {
             (Types::Int32, Token::Int32(int32)) => Ok((Token::Int32(int32.clone()), Types::Int32)),
             (Types::Int32, Token::Int64(int64)) => {
-                Ok((Token::Int32((*int64).into()), Types::Int32))
+                Ok((Token::Int32(Int32::from(*int64 as i32)), Types::Int32))
             }
             (Types::Int32, Token::Double(double)) => {
                 Ok((Token::Int32(Int32::new(*double as i32)), Types::Int32))

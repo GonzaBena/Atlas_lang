@@ -92,7 +92,7 @@ impl Token {
                 Err(_) => Token::EOF, // Si no se puede parsear, devolvemos un Token::EOF
             },
             Types::Double => match id.parse::<f64>() {
-                Ok(value) => Token::Double(value.into()),
+                Ok(value) => Token::Double(Double::new(value)),
                 Err(_) => Token::EOF,
             },
             _ => {
@@ -134,7 +134,9 @@ impl Token {
         match (self, &new_type) {
             (Token::Int32(int32), Types::Int32) => Ok(Token::Int32(*int32)),
             (Token::Int32(int32), Types::Int64) => Ok(Token::Int64(<Int64>::from(*int32))),
-            (Token::Int32(int32), Types::Double) => Ok(Token::Double(<Double>::from(*int32))),
+            (Token::Int32(int32), Types::Double) => {
+                Ok(Token::Double(Double::new((**int32) as f64)))
+            }
             (Token::Int32(int32), Types::String) => Ok(Token::String(int32.to_string())),
             (Token::Int32(int32), Types::Str) => {
                 Ok(Token::Str(Arc::from(int32.to_string().as_str())))
@@ -142,7 +144,7 @@ impl Token {
             (Token::Int32(int32), Types::Boolean) => Ok(Token::Boolean(*int32 != 0)),
 
             (Token::Int64(int64), Types::Int32) => match i32::try_from(**int64) {
-                Ok(n) => Ok(Token::Int32(<Int32>::from(*int64))),
+                Ok(n) => Ok(Token::Int32(Int32::from(n))),
                 Err(_) => Err(ParseError::InvalidTypeConvertion(format!(
                     "The number {int64} exceed the limit"
                 ))),
@@ -194,7 +196,7 @@ impl Token {
             }
             (Token::Str(string), Types::Double) => {
                 if let Ok(value) = string.parse::<f64>() {
-                    Ok(Token::Double(value.into()))
+                    Ok(Token::Double(Double::new(value)))
                 } else {
                     Err(ParseError::InvalidTypeConvertion(format!(
                         "You can't convert a '{}' into {}",
@@ -226,9 +228,9 @@ impl Token {
             }
             (Token::Boolean(bool), Types::Double) => {
                 if *bool {
-                    Ok(Token::Double((1.0).into()))
+                    Ok(Token::Double(Double::new(1.0)))
                 } else {
-                    Ok(Token::Double((0.0).into()))
+                    Ok(Token::Double(Double::new(0.0)))
                 }
             }
             (Token::Boolean(bool), Types::String) => {
@@ -327,13 +329,13 @@ impl From<i64> for Token {
 
 impl From<u32> for Token {
     fn from(value: u32) -> Self {
-        Token::Int32(value.into())
+        Token::Int32(Int32::from(value as i32))
     }
 }
 
 impl From<f64> for Token {
     fn from(value: f64) -> Self {
-        Token::Double(value.into())
+        Token::Double(Double::new(value))
     }
 }
 

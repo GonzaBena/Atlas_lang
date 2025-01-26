@@ -3,8 +3,8 @@ use std::io::{BufReader, Read};
 use std::os::unix::fs::MetadataExt;
 use std::path::PathBuf;
 
+/// It's in charge of manage every file related with this proyect such as root_file or their dependecies in case that it has them.
 #[derive(Debug)]
-#[allow(dead_code)]
 pub struct Project {
     pub files: Vec<File>,
 }
@@ -25,12 +25,19 @@ impl Project {
 #[derive(Debug)]
 #[allow(dead_code)]
 pub struct File {
+    /// The path related with this file
     pub file_path: PathBuf,
+
+    /// The name of the file
     pub filename: String,
 
     /// size in Bytes
     pub size: u64,
+
+    /// Read, write, execution, etc...
     pub permissions: Permissions,
+
+    /// data within the file
     pub content: String,
 }
 

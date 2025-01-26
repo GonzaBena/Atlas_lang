@@ -1,5 +1,8 @@
-use atlas_lang::compiler::{
-    elements::token::Token, lexer::Lexer, parser::Parser, types::Types, variable::Variable,
+use atlas_lang::{
+    compiler::{
+        elements::token::Token, lexer::Lexer, parser::Parser, types::Types, variable::Variable,
+    },
+    types::basic::number::double::Double,
 };
 
 #[test]
@@ -164,7 +167,7 @@ fn div_test() {
     let mut parser = Parser::new(tokens, None, None);
     let parse = parser.parse().unwrap();
 
-    assert_eq!(parse, vec![Token::Double(5.into())])
+    assert_eq!(parse, vec![Token::Double(Double::from(5))])
 }
 
 #[test]
@@ -185,7 +188,7 @@ fn div_assign_test() {
         Variable::new(
             "hola".to_string(),
             Types::Double,
-            Token::Double(5.into()),
+            Token::Double(Double::from(5)),
             0,
         ),
     )];

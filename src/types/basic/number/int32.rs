@@ -16,12 +16,15 @@ impl ToPrimitive for Int32 {
         Some(self.data as i64)
     }
 
+    fn to_f64(&self) -> Option<f64> {
+        Some(self.data as f64)
+    }
+
     fn to_u64(&self) -> Option<u64> {
         Some(self.data as u64)
     }
 }
 
-#[allow(dead_code)]
 impl Int32 {
     pub const MAX: Int32 = Int32 { data: i32::MAX };
     pub const MIN: Int32 = Int32 { data: i32::MIN };
@@ -51,49 +54,9 @@ impl fmt::Display for Int32 {
     }
 }
 
-impl Into<f64> for Int32 {
-    fn into(self) -> f64 {
-        self.data as f64
-    }
-}
-
-impl From<i32> for Int32 {
-    fn from(value: i32) -> Self {
-        Self { data: value }
-    }
-}
-
-impl From<i64> for Int32 {
-    fn from(value: i64) -> Self {
-        Self { data: value as i32 }
-    }
-}
-
-impl From<Int64> for Int32 {
-    fn from(value: Int64) -> Self {
-        Self {
-            data: *value as i32,
-        }
-    }
-}
-
-impl From<f64> for Int32 {
-    fn from(value: f64) -> Self {
-        Self { data: value as i32 }
-    }
-}
-
-impl From<u32> for Int32 {
-    fn from(value: u32) -> Self {
-        Self {
-            data: value.to_string().parse().expect("Espected a u32"),
-        }
-    }
-}
-
-impl From<Double> for Int32 {
-    fn from(value: Double) -> Int32 {
-        Int32::new(*value as i32)
+impl<T: Into<i32>> From<T> for Int32 {
+    fn from(value: T) -> Self {
+        Self { data: value.into() }
     }
 }
 
@@ -106,21 +69,15 @@ impl Add for Int32 {
     }
 }
 
-impl Add<Double> for Int32 {
-    type Output = Double;
+impl<T> Add<T> for Int32
+where
+    T: Into<i32>,
+{
+    type Output = Self;
 
-    fn add(self, rhs: Double) -> Self::Output {
-        let result = *self as f64 + *rhs;
-        Self::Output::new(result)
-    }
-}
-
-impl Add<Int64> for Int32 {
-    type Output = Int64;
-
-    fn add(self, rhs: Self::Output) -> Self::Output {
-        let result = *self as i64 + *rhs;
-        Self::Output::new(result)
+    fn add(self, rhs: T) -> Self::Output {
+        let result = *self + rhs.into();
+        Self { data: result }
     }
 }
 
@@ -139,21 +96,15 @@ impl Sub for Int32 {
     }
 }
 
-impl Sub<Double> for Int32 {
-    type Output = Double;
+impl<T> Sub<T> for Int32
+where
+    T: Into<i32>,
+{
+    type Output = Self;
 
-    fn sub(self, rhs: Double) -> Self::Output {
-        let result = *self as f64 - *rhs;
-        Self::Output::new(result)
-    }
-}
-
-impl Sub<Int64> for Int32 {
-    type Output = Int64;
-
-    fn sub(self, rhs: Int64) -> Self::Output {
-        let result = *self as i64 - *rhs;
-        Self::Output::new(result)
+    fn sub(self, rhs: T) -> Self::Output {
+        let result = *self - rhs.into();
+        Self { data: result }
     }
 }
 
