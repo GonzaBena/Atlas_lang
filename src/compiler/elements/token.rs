@@ -64,10 +64,10 @@ impl Display for Token {
                 if string.len() <= 1 {
                     write!(f, "{}", string.chars().next().unwrap_or_default())
                 } else {
-                    write!(f, "\"{string}\"")
+                    write!(f, "{string}")
                 }
             }
-            Token::Str(string) => write!(f, "\"{string}\""),
+            Token::Str(string) => write!(f, "{string}"),
             _ => write!(f, "{}", String::from("funcion")),
         }
     }

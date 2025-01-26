@@ -64,6 +64,15 @@ impl<'a> Lexer<'a> {
                     }
                 }
 
+                '\'' => {
+                    self.content.next();
+                    let id = self.cut_str();
+                    match id {
+                        Ok(id) => result.push(Token::Str(Arc::from(id))),
+                        Err(err) => panic(&format!("{:?}", err)),
+                    }
+                }
+
                 // Numbers
                 '0'..='9' | '.' => {
                     let number = self.cut_number();
@@ -258,6 +267,42 @@ impl<'a> Lexer<'a> {
             keyword: None,
             return_type: None,
         })
+    }
+
+    fn cut_str(&mut self) -> Result<String, LexicError> {
+        let mut id = String::new();
+
+        while let Some(char) = self.content.next() {
+            if char == '\'' {
+                break;
+            }
+            match char {
+                '\\' => match self.content.peek() {
+                    Some(ch) => {
+                        match ch {
+                            'r' => {
+                                self.content.next();
+                                id.push('\r');
+                                id.push('\n');
+                            }
+                            'n' => {
+                                self.content.next();
+                                id.push('\n')
+                            }
+                            't' => {
+                                self.content.next();
+                                id.push('\t')
+                            }
+                            _ => return Err(LexicError::UnfinalizedString),
+                        };
+                    }
+                    None => return Err(LexicError::UnfinalizedString),
+                },
+                _ => id.push(char),
+            };
+        }
+
+        Ok(id)
     }
 
     fn cut_string(&mut self) -> Result<String, LexicError> {

@@ -259,6 +259,11 @@ impl Parser {
                 Ok(Token::String(s.clone()))
             }
 
+            Token::Str(s) => {
+                self.position += 1; // Consume the string
+                Ok(Token::Str(s.clone()))
+            }
+
             Token::Keyword(k) => {
                 self.position += 1; // Consume the keyword
                 match k {
