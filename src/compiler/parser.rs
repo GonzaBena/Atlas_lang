@@ -93,38 +93,49 @@ impl Parser {
         while self.position < self.tokens.len() {
             let token = &self.tokens[self.position];
             if *token == Token::EOF {
-                continue;
+                // Si se llega a EOF, salimos.
+                break;
             }
 
             match token {
-                Token::Keyword(Keyword::Var) => match self.assignment() {
-                    Ok(_) => {}
-                    Err(err) => {
+                Token::Keyword(Keyword::Var) => {
+                    // Intentamos parsear una asignación
+                    if let Err(err) = self.assignment() {
                         eprintln!("Parsing error: {:?}", err);
-                        self.recover_from_error();
-                    }
-                },
-                Token::Keyword(Keyword::Function) => {
-                    if let Err(err) = self.function_assignment() {
-                        eprintln!("Parsing error in function definition: {:?}", err);
-                        self.recover_from_error();
+                        self.recover_from_error(); // --- Recuperación de error
                     }
                 }
-                Token::Operator(op) if op.is_assignation() => match self.assignment() {
-                    Ok(_) => {}
-                    Err(err) => {
-                        eprintln!("Parsing error: {:?}", err);
-                        self.recover_from_error();
+                Token::Keyword(Keyword::Function) => {
+                    // Intentamos parsear una función
+                    if let Err(err) = self.function_assignment() {
+                        eprintln!("Parsing error in function definition: {:?}", err);
+                        self.recover_from_error(); // --- Recuperación de error
                     }
-                },
+                }
                 _ => {
-                    let result = self.resolve()?;
-                    if result != Token::Void && result != Token::EOF {
-                        let data = match result {
-                            Token::Operation(mut op) => op.resolve()?,
-                            v => v,
-                        };
-                        results.push(data);
+                    match self.resolve() {
+                        Ok(result) => {
+                            if result == Token::Void || result == Token::EOF {
+                                continue;
+                            }
+                            match result {
+                                Token::Operation(mut operation) => {
+                                    match operation.resolve() {
+                                        Ok(resolved) => results.push(resolved),
+                                        Err(err) => {
+                                            eprintln!("{:?}", err);
+                                            self.recover_from_error(); // --- Recuperación de error
+                                        }
+                                    }
+                                }
+                                Token::EOF | Token::Void => continue,
+                                _ => results.push(result),
+                            };
+                        }
+                        Err(err) => {
+                            eprintln!("Parsing error: {:?}", err);
+                            self.recover_from_error(); // --- Recuperación de error
+                        }
                     }
                 }
             }
@@ -319,7 +330,7 @@ impl Parser {
     fn recover_from_error(&mut self) {
         let sync_tokens = [
             Token::NewLine,
-            Token::Separator(';'),
+            // Token::Separator(';'),
             Token::StartBrace,
             Token::EndBrace,
         ];
@@ -759,7 +770,6 @@ impl Parser {
         }
 
         let (is_assignment, op) = self.is_assignment()?;
-        self.position += 1;
         if is_assignment {
             let var = self.validate_existing_identifier()?;
             let right = self.term()?;
@@ -854,7 +864,6 @@ impl Parser {
             result.push(token.clone());
             *position += 1;
         }
-        println!("args: {result:?}");
         let mut data: Vec<Argument> = vec![];
         for res in result.split(|x| *x.to_string() == Token::Separator(',').to_string()) {
             let mut parser = Parser::internal_new(

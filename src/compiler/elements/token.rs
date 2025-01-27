@@ -6,7 +6,9 @@ use std::{
 use super::{keyword::Keyword, operation::Operation, operator::Operator};
 use crate::{
     compiler::{error::parse_error::ParseError, types::Types},
-    types::basic::number::{double::Double, float::Float, int32::Int32, int64::Int64},
+    types::basic::number::{
+        double::Double, float::Float, hpint::HPInt, int32::Int32, int64::Int64,
+    },
 };
 
 /// Represent each possible token which you can use.
@@ -25,6 +27,7 @@ pub enum Token {
     // Datatypes
     Int32(Int32),
     Int64(Int64),
+    HPInt(HPInt),
     Float(Float),
     Double(Double),
     String(String),
@@ -53,6 +56,7 @@ impl Display for Token {
             Token::Keyword(keyword) => write!(f, "{}", String::from(keyword.to_string())),
             Token::Int32(num) => write!(f, "{num}"),
             Token::Int64(num) => write!(f, "{num}"),
+            Token::HPInt(num) => write!(f, "{num}"),
             Token::Float(num) => write!(f, "{num}"),
             Token::Double(num) => write!(f, "{num}"),
             Token::NewLine => write!(f, "{}", String::from("\n")),
@@ -83,11 +87,15 @@ impl Token {
         let id: String = num.to_string();
 
         match num_type {
-            Types::Int32 => match id.parse::<f32>() {
+            Types::Int32 => match id.parse::<i32>() {
                 Ok(value) => Token::Int32(Int32::new(value as i32)),
                 Err(_) => Token::EOF, // Si no se puede parsear, devolvemos un Token::EOF
             },
-            Types::Int64 => match id.parse::<f64>() {
+            Types::Int64 => match id.parse::<i64>() {
+                Ok(value) => Token::Int64(Int64::new(value as i64)),
+                Err(_) => Token::EOF, // Si no se puede parsear, devolvemos un Token::EOF
+            },
+            Types::HPInt => match id.parse::<i64>() {
                 Ok(value) => Token::Int64(Int64::new(value as i64)),
                 Err(_) => Token::EOF, // Si no se puede parsear, devolvemos un Token::EOF
             },
@@ -281,6 +289,7 @@ impl Token {
             Token::Type(types) => Box::leak((*types).to_string().into_boxed_str()),
             Token::Int32(int32) => Box::leak(int32.to_string().into_boxed_str()),
             Token::Int64(int64) => Box::leak(int64.to_string().into_boxed_str()),
+            Token::HPInt(int128) => Box::leak(int128.to_string().into_boxed_str()),
             Token::Double(double) => Box::leak(double.to_string().into_boxed_str()),
             Token::Float(float) => Box::leak(float.to_string().into_boxed_str()),
             Token::String(s) => s,
@@ -324,6 +333,12 @@ impl From<i32> for Token {
 impl From<i64> for Token {
     fn from(value: i64) -> Self {
         Token::Int64(value.into())
+    }
+}
+
+impl From<i128> for Token {
+    fn from(value: i128) -> Self {
+        Token::HPInt(value.into())
     }
 }
 

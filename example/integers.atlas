@@ -18,6 +18,7 @@ var str_2: Str = '20'
 
 showVars()
 
+print('Add')
 dprint(int32_1 + int32_2)
 dprint(int32_1 + int64_1)
 dprint(int32_1 + float_1)
@@ -26,7 +27,7 @@ dprint(int32_1 + string_1)
 dprint(int32_1 + str_1)
 print(' ')
 
-
+print('Sub')
 dprint(int32_1 - int32_2)
 dprint(int32_1 - int64_1)
 dprint(int32_1 - float_1)
@@ -35,16 +36,19 @@ dprint(int32_1 - string_1)
 dprint(int32_1 - str_1)
 print(' ')
 
-
+print('Mul')
 dprint(int32_1 * int32_2)
 dprint(int32_1 * int64_1)
 dprint(int32_1 * float_1)
 dprint(int32_1 * double_1)
 dprint(int32_1 * string_1)
 dprint(int32_1 * str_1)
+dprint(string_1 * int32_1)
+dprint(str_1 * int32_1)
 print(' ')
 
 
+print('Power')
 dprint(int32_1 ** int32_2)
 dprint(int32_1 ** int64_1)
 dprint(int32_1 ** float_1)
@@ -54,15 +58,19 @@ dprint(int32_1 ** str_1)
 print(' ')
 
 
+print('Division')
 dprint(int32_1 / int32_2)
 dprint(int32_1 / int64_1)
 dprint(int32_1 / float_1)
 dprint(int32_1 / double_1)
 dprint(int32_1 / string_1)
 dprint(int32_1 / str_1)
+dprint(string_1 / 1)
+dprint(str_1 / 1)
 print(' ')
 
 
+print('Integer Division')
 dprint(int32_1 // int32_2)
 dprint(int32_1 // int64_1)
 dprint(int32_1 // float_1)
@@ -72,6 +80,7 @@ dprint(int32_1 // str_1)
 print(' ')
 
 
+print('Module')
 dprint(int32_1 % int32_2)
 dprint(int32_1 % int64_1)
 dprint(int32_1 % float_1)

@@ -70,7 +70,7 @@ impl Double {
 }
 
 impl Number for Double {
-    type Number = Self;
+    type Pow = Self;
     type Output = Self;
 
     fn add<T: Number>(&self, other: T) -> Self::Output {
@@ -94,11 +94,11 @@ impl Number for Double {
         Self::new(result)
     }
 
-    fn abs<T: Number>(&self) -> Self::Number {
+    fn abs<T: Number>(&self) -> Self::Output {
         Self::new((**self).abs())
     }
 
-    fn power<T: Into<i32> + PartialOrd<i32> + Clone>(&self, other: T) -> Self::Output {
+    fn power<T: Into<i32> + PartialOrd<i32> + Clone>(&self, other: T) -> Self::Pow {
         let mut result = **self;
 
         if other <= 1 {

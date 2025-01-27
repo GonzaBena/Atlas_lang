@@ -53,48 +53,6 @@ where
     }
 }
 
-// impl From<i64> for Int64 {
-//     fn from(value: i64) -> Self {
-//         Self { data: value }
-//     }
-// }
-
-// impl From<i32> for Int64 {
-//     fn from(value: i32) -> Self {
-//         Self { data: value as i64 }
-//     }
-// }
-
-// impl From<Int32> for Int64 {
-//     fn from(value: Int32) -> Self {
-//         Self {
-//             data: *value as i64,
-//         }
-//     }
-// }
-
-// impl From<f64> for Int64 {
-//     fn from(value: f64) -> Self {
-//         Self { data: value as i64 }
-//     }
-// }
-
-// impl From<Double> for Int64 {
-//     fn from(value: Double) -> Self {
-//         Self {
-//             data: *value as i64,
-//         }
-//     }
-// }
-
-// impl From<u32> for Int64 {
-//     fn from(value: u32) -> Self {
-//         Self {
-//             data: value.to_string().parse().expect("Espected a u32"),
-//         }
-//     }
-// }
-
 impl Add for Int64 {
     type Output = Self;
 

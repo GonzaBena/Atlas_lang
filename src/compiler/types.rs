@@ -11,6 +11,8 @@ use super::{elements::token::Token, error::parse_error::ParseError};
 pub enum Types {
     Int32,
     Int64,
+    /// High Precision Integer
+    HPInt,
     Float,
     Double,
     String,
@@ -26,7 +28,7 @@ pub enum Types {
 impl Types {
     pub fn is_integer(&self) -> bool {
         match self {
-            Self::Int32 | Self::Int64 => true,
+            Self::Int32 | Self::Int64 | Self::HPInt => true,
             _ => false,
         }
     }
@@ -68,6 +70,7 @@ impl Types {
         match value {
             Token::Int32(_) => Ok(Self::Int32),
             Token::Int64(_) => Ok(Self::Int64),
+            Token::HPInt(_) => Ok(Self::HPInt),
             Token::Double(_) => Ok(Self::Double),
             Token::Float(_) => Ok(Self::Float),
             Token::String(_) => Ok(Self::String),
@@ -86,6 +89,9 @@ impl Types {
             (Types::Int32, Token::Int32(int32)) => Ok((Token::Int32(int32.clone()), Types::Int32)),
             (Types::Int32, Token::Int64(int64)) => {
                 Ok((Token::Int32(Int32::from(*int64 as i32)), Types::Int32))
+            }
+            (Types::Int32, Token::HPInt(int128)) => {
+                Ok((Token::Int32(Int32::from(*int128 as i32)), Types::Int32))
             }
             (Types::Int32, Token::Double(double)) => {
                 Ok((Token::Int32(Int32::new(*double as i32)), Types::Int32))
@@ -108,6 +114,9 @@ impl Types {
                 Ok((Token::Int64((*int32 as i64).into()), Types::Int64))
             }
             (Types::Int64, Token::Int64(int64)) => Ok((Token::Int64(int64.clone()), Types::Int64)),
+            (Types::Int64, Token::HPInt(int128)) => {
+                Ok((Token::Int64((*int128 as i64).into()), Types::Int64))
+            }
             (Types::Int64, Token::Double(double)) => {
                 Ok((Token::Int64(Int64::new(*double as i64)), Types::Int64))
             }
@@ -130,6 +139,9 @@ impl Types {
             }
             (Types::Float, Token::Int64(int64)) => {
                 Ok((Token::Float(Float::new(*int64 as f32)), Types::Float))
+            }
+            (Types::Float, Token::HPInt(int128)) => {
+                Ok((Token::Float(Float::new(*int128 as f32)), Types::Float))
             }
             (Types::Float, Token::Float(double)) => {
                 Ok((Token::Float(double.clone()), Types::Float))
@@ -160,6 +172,9 @@ impl Types {
             }
             (Types::Double, Token::Int64(int64)) => {
                 Ok((Token::Double(Double::new(*int64 as f64)), Types::Double))
+            }
+            (Types::Double, Token::HPInt(int128)) => {
+                Ok((Token::Double(Double::new(*int128 as f64)), Types::Double))
             }
             (Types::Double, Token::Double(double)) => {
                 Ok((Token::Double(double.clone()), Types::Double))
@@ -207,6 +222,7 @@ impl fmt::Display for Types {
         match self {
             Types::Int32 => write!(f, "Int32"),
             Types::Int64 => write!(f, "Int64"),
+            Types::HPInt => write!(f, "HPInt"),
             Types::Float => write!(f, "Float"),
             Types::Double => write!(f, "Double"),
             Types::String => write!(f, "String"),
@@ -227,6 +243,7 @@ impl FromStr for Types {
             "Boolean" => Ok(Self::Boolean),
             "Int32" => Ok(Self::Int32),
             "Int64" => Ok(Self::Int64),
+            "HPInt" => Ok(Self::HPInt),
             "Float" => Ok(Self::Float),
             "Double" => Ok(Self::Double),
             "String" => Ok(Self::String),
@@ -244,6 +261,7 @@ impl From<&Token> for Types {
             Token::Boolean(_) => Self::Boolean,
             Token::Int32(_) => Self::Int32,
             Token::Int64(_) => Self::Int64,
+            Token::HPInt(_) => Self::HPInt,
             Token::Float(_) => Self::Float,
             Token::Double(_) => Self::Double,
             Token::String(_) => Self::String,
@@ -260,10 +278,12 @@ impl From<Token> for Types {
         match value {
             Token::Boolean(_) => Self::Boolean,
             Token::Int32(_) => Self::Int32,
+            Token::Int64(_) => Self::Int64,
+            Token::HPInt(_) => Self::HPInt,
             Token::Float(_) => Self::Float,
             Token::Double(_) => Self::Double,
             Token::String(_) => Self::String,
-            // Token::Str => Self::Str,
+            Token::Str(_) => Self::Str,
             Token::Void => Self::Void,
             // Token::Function => Self::Function,
             _ => Self::Void,

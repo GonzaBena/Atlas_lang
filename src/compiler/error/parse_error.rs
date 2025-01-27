@@ -11,6 +11,9 @@ pub enum ParseError {
     #[error("UndefinedVariable: {0}")]
     UndefinedVariable(String),
 
+    #[error("DivisionByZero: You can't Divide whatever by Zero.")]
+    DivisionByZero,
+
     #[error("Unexpected token at position {position}: {token:?}")]
     UnexpectedToken { position: usize, token: Token },
 
