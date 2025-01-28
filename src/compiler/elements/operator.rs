@@ -1,7 +1,3 @@
-use std::ops::MulAssign;
-
-use num::CheckedMul;
-
 use crate::{
     compiler::{error::parse_error::ParseError, types::Types},
     types::basic::number::{
@@ -63,6 +59,19 @@ pub enum Operator {
     /// Module and Assignation
     ModAssign,
 
+    /// One is greater than other
+    Greater,
+
+    GreaterOrEqual,
+
+    Lower,
+
+    LowerOrEqual,
+
+    Equal,
+
+    StrictEqual,
+
     /// useless operator, It doesn't have use
     Null,
 }
@@ -85,7 +94,17 @@ impl ToString for Operator {
             Operator::DivIntAssign => String::from("//="),
             Operator::Mod => String::from("%"),
             Operator::ModAssign => String::from("%="),
-            _ => String::from(""),
+
+            // MARK: Comparation
+            Operator::Greater => String::from(">"),
+            Operator::GreaterOrEqual => String::from(">="),
+            Operator::Lower => String::from("<"),
+            Operator::LowerOrEqual => String::from("<="),
+            Operator::Equal => String::from("=="),
+            Operator::StrictEqual => String::from("==="),
+
+            Operator::Null => String::from("null"),
+            // _ => String::from(""),
         }
     }
 }

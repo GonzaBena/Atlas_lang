@@ -25,6 +25,7 @@ impl ToPrimitive for Int32 {
     }
 }
 
+#[allow(dead_code)]
 impl Int32 {
     pub const MAX: Int32 = Int32 { data: i32::MAX };
     pub const MIN: Int32 = Int32 { data: i32::MIN };

@@ -11,6 +11,7 @@ pub struct Float {
     data: f32,
 }
 
+#[allow(dead_code)]
 impl Float {
     pub fn new(num: f32) -> Self {
         Self { data: num }

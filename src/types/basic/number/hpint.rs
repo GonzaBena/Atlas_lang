@@ -55,7 +55,7 @@ impl ToPrimitive for HPInt {
         self.data.to_i128()
     }
 }
-
+#[allow(dead_code)]
 impl Number for HPInt {
     type Pow = Self;
     type Output = Self;
@@ -69,15 +69,15 @@ impl Number for HPInt {
     }
 
     fn mul<T: Number>(&self, other: T) -> Self::Output {
-        todo!()
+        Self::Output::new(self.data * other.to_i128().unwrap_or_default())
     }
 
-    fn div<T: Number>(&self, other: T) -> Self::Output {
-        todo!()
+    fn div<T: Number>(&self, other: T) -> Double {
+        Double::from(self.data.to_f64().unwrap_or_default() / other.to_f64().unwrap_or_default())
     }
 
     fn module<T: Number>(&self, other: T) -> Self::Output {
-        todo!()
+        Self::Output::new(self.data % other.to_i128().unwrap_or_default())
     }
 
     fn abs<T: Number>(&self) -> Self::Output {
@@ -85,7 +85,7 @@ impl Number for HPInt {
     }
 
     fn power<T: Into<i32> + PartialOrd<i32> + Clone>(&self, other: T) -> Self::Pow {
-        todo!()
+        Self::Output::new(self.data.pow(other.into() as u32))
     }
 }
 
@@ -157,7 +157,7 @@ impl<T: Number> MulAssign<T> for HPInt {
 }
 
 impl<T: Number> Div<T> for HPInt {
-    type Output = Self;
+    type Output = Double;
 
     fn div(self, rhs: T) -> Self::Output {
         let result = Number::div(&self, rhs);
