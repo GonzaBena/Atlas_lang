@@ -620,6 +620,267 @@ impl Operator {
                 }),
             },
 
+            Self::Greater => match (left, right.clone()) {
+                (Token::Int32(num), num2) => match num2 {
+                    Token::Int32(int32) => Ok(Token::Boolean(*num > *int32)),
+                    Token::Int64(int64) => Ok(Token::Boolean(*num > *int64 as i32)),
+                    Token::HPInt(hpint) => Ok(Token::Boolean(*num > *hpint as i32)),
+                    Token::Float(float) => Ok(Token::Boolean(*num > *float as i32)),
+                    Token::Double(double) => Ok(Token::Boolean(*num > *double as i32)),
+                    _ => Err(ParseError::NotOrd {
+                        type1: String::from("Int32"),
+                        type2: Types::from(num2).to_string(),
+                    }),
+                },
+
+                (Token::Int64(num), num2) => match num2 {
+                    Token::Int32(int32) => Ok(Token::Boolean(*num > *int32 as i64)),
+                    Token::Int64(int64) => Ok(Token::Boolean(*num > *int64)),
+                    Token::HPInt(hpint) => Ok(Token::Boolean(*num > *hpint as i64)),
+                    Token::Float(float) => Ok(Token::Boolean(*num > *float as i64)),
+                    Token::Double(double) => Ok(Token::Boolean(*num > *double as i64)),
+                    _ => Err(ParseError::NotOrd {
+                        type1: String::from("Int64"),
+                        type2: Types::from(num2).to_string(),
+                    }),
+                },
+
+                (Token::HPInt(num), num2) => match num2 {
+                    Token::Int32(int32) => Ok(Token::Boolean(*num > *int32 as i128)),
+                    Token::Int64(int64) => Ok(Token::Boolean(*num > *int64 as i128)),
+                    Token::HPInt(hpint) => Ok(Token::Boolean(*num > *hpint)),
+                    Token::Float(float) => Ok(Token::Boolean(*num > *float as i128)),
+                    Token::Double(double) => Ok(Token::Boolean(*num > *double as i128)),
+                    _ => Err(ParseError::NotOrd {
+                        type1: String::from("HPInt"),
+                        type2: Types::from(num2).to_string(),
+                    }),
+                },
+
+                (Token::Float(num), num2) => match num2 {
+                    Token::Int32(int32) => Ok(Token::Boolean(*num > *int32 as f32)),
+                    Token::Int64(int64) => Ok(Token::Boolean(*num > *int64 as f32)),
+                    Token::HPInt(hpint) => Ok(Token::Boolean(*num > *hpint as f32)),
+                    Token::Float(float) => Ok(Token::Boolean(*num > *float)),
+                    Token::Double(double) => Ok(Token::Boolean(*num > *double as f32)),
+                    _ => Err(ParseError::NotOrd {
+                        type1: String::from("Float"),
+                        type2: Types::from(num2).to_string(),
+                    }),
+                },
+
+                (Token::Double(num), num2) => match num2 {
+                    Token::Int32(int32) => Ok(Token::Boolean(*num > *int32 as f64)),
+                    Token::Int64(int64) => Ok(Token::Boolean(*num > *int64 as f64)),
+                    Token::HPInt(hpint) => Ok(Token::Boolean(*num > *hpint as f64)),
+                    Token::Float(float) => Ok(Token::Boolean(*num > *float as f64)),
+                    Token::Double(double) => Ok(Token::Boolean(*num > *double)),
+                    _ => Err(ParseError::NotOrd {
+                        type1: String::from("Double"),
+                        type2: Types::from(num2).to_string(),
+                    }),
+                },
+
+                _ => todo!("Cmp"),
+            },
+
+            Self::GreaterOrEqual => match (left, right.clone()) {
+                (Token::Int32(num), num2) => match num2 {
+                    Token::Int32(int32) => Ok(Token::Boolean(*num >= *int32)),
+                    Token::Int64(int64) => Ok(Token::Boolean(*num >= *int64 as i32)),
+                    Token::HPInt(hpint) => Ok(Token::Boolean(*num >= *hpint as i32)),
+                    Token::Float(float) => Ok(Token::Boolean(*num >= *float as i32)),
+                    Token::Double(double) => Ok(Token::Boolean(*num >= *double as i32)),
+                    _ => Err(ParseError::NotOrd {
+                        type1: String::from("Int32"),
+                        type2: Types::from(num2).to_string(),
+                    }),
+                },
+
+                (Token::Int64(num), num2) => match num2 {
+                    Token::Int32(int32) => Ok(Token::Boolean(*num >= *int32 as i64)),
+                    Token::Int64(int64) => Ok(Token::Boolean(*num >= *int64)),
+                    Token::HPInt(hpint) => Ok(Token::Boolean(*num >= *hpint as i64)),
+                    Token::Float(float) => Ok(Token::Boolean(*num >= *float as i64)),
+                    Token::Double(double) => Ok(Token::Boolean(*num >= *double as i64)),
+                    _ => Err(ParseError::NotOrd {
+                        type1: String::from("Int64"),
+                        type2: Types::from(num2).to_string(),
+                    }),
+                },
+
+                (Token::HPInt(num), num2) => match num2 {
+                    Token::Int32(int32) => Ok(Token::Boolean(*num >= *int32 as i128)),
+                    Token::Int64(int64) => Ok(Token::Boolean(*num >= *int64 as i128)),
+                    Token::HPInt(hpint) => Ok(Token::Boolean(*num >= *hpint)),
+                    Token::Float(float) => Ok(Token::Boolean(*num >= *float as i128)),
+                    Token::Double(double) => Ok(Token::Boolean(*num >= *double as i128)),
+                    _ => Err(ParseError::NotOrd {
+                        type1: String::from("HPInt"),
+                        type2: Types::from(num2).to_string(),
+                    }),
+                },
+
+                (Token::Float(num), num2) => match num2 {
+                    Token::Int32(int32) => Ok(Token::Boolean(*num >= *int32 as f32)),
+                    Token::Int64(int64) => Ok(Token::Boolean(*num >= *int64 as f32)),
+                    Token::HPInt(hpint) => Ok(Token::Boolean(*num >= *hpint as f32)),
+                    Token::Float(float) => Ok(Token::Boolean(*num >= *float)),
+                    Token::Double(double) => Ok(Token::Boolean(*num >= *double as f32)),
+                    _ => Err(ParseError::NotOrd {
+                        type1: String::from("Float"),
+                        type2: Types::from(num2).to_string(),
+                    }),
+                },
+
+                (Token::Double(num), num2) => match num2 {
+                    Token::Int32(int32) => Ok(Token::Boolean(*num >= *int32 as f64)),
+                    Token::Int64(int64) => Ok(Token::Boolean(*num >= *int64 as f64)),
+                    Token::HPInt(hpint) => Ok(Token::Boolean(*num >= *hpint as f64)),
+                    Token::Float(float) => Ok(Token::Boolean(*num >= *float as f64)),
+                    Token::Double(double) => Ok(Token::Boolean(*num >= *double)),
+                    _ => Err(ParseError::NotOrd {
+                        type1: String::from("Double"),
+                        type2: Types::from(num2).to_string(),
+                    }),
+                },
+
+                _ => todo!("Cmp"),
+            },
+
+            Self::Lower => match (left, right.clone()) {
+                (Token::Int32(num), num2) => match num2 {
+                    Token::Int32(int32) => Ok(Token::Boolean(*num < *int32)),
+                    Token::Int64(int64) => Ok(Token::Boolean(*num < *int64 as i32)),
+                    Token::HPInt(hpint) => Ok(Token::Boolean(*num < *hpint as i32)),
+                    Token::Float(float) => Ok(Token::Boolean(*num < *float as i32)),
+                    Token::Double(double) => Ok(Token::Boolean(*num < *double as i32)),
+                    _ => Err(ParseError::NotOrd {
+                        type1: String::from("Int32"),
+                        type2: Types::from(num2).to_string(),
+                    }),
+                },
+
+                (Token::Int64(num), num2) => match num2 {
+                    Token::Int32(int32) => Ok(Token::Boolean(*num < *int32 as i64)),
+                    Token::Int64(int64) => Ok(Token::Boolean(*num < *int64)),
+                    Token::HPInt(hpint) => Ok(Token::Boolean(*num < *hpint as i64)),
+                    Token::Float(float) => Ok(Token::Boolean(*num < *float as i64)),
+                    Token::Double(double) => Ok(Token::Boolean(*num < *double as i64)),
+                    _ => Err(ParseError::NotOrd {
+                        type1: String::from("Int64"),
+                        type2: Types::from(num2).to_string(),
+                    }),
+                },
+
+                (Token::HPInt(num), num2) => match num2 {
+                    Token::Int32(int32) => Ok(Token::Boolean(*num < *int32 as i128)),
+                    Token::Int64(int64) => Ok(Token::Boolean(*num < *int64 as i128)),
+                    Token::HPInt(hpint) => Ok(Token::Boolean(*num < *hpint)),
+                    Token::Float(float) => Ok(Token::Boolean(*num < *float as i128)),
+                    Token::Double(double) => Ok(Token::Boolean(*num < *double as i128)),
+                    _ => Err(ParseError::NotOrd {
+                        type1: String::from("HPInt"),
+                        type2: Types::from(num2).to_string(),
+                    }),
+                },
+
+                (Token::Float(num), num2) => match num2 {
+                    Token::Int32(int32) => Ok(Token::Boolean(*num < *int32 as f32)),
+                    Token::Int64(int64) => Ok(Token::Boolean(*num < *int64 as f32)),
+                    Token::HPInt(hpint) => Ok(Token::Boolean(*num < *hpint as f32)),
+                    Token::Float(float) => Ok(Token::Boolean(*num < *float)),
+                    Token::Double(double) => Ok(Token::Boolean(*num < *double as f32)),
+                    _ => Err(ParseError::NotOrd {
+                        type1: String::from("Float"),
+                        type2: Types::from(num2).to_string(),
+                    }),
+                },
+
+                (Token::Double(num), num2) => match num2 {
+                    Token::Int32(int32) => Ok(Token::Boolean(*num < *int32 as f64)),
+                    Token::Int64(int64) => Ok(Token::Boolean(*num < *int64 as f64)),
+                    Token::HPInt(hpint) => Ok(Token::Boolean(*num < *hpint as f64)),
+                    Token::Float(float) => Ok(Token::Boolean(*num < *float as f64)),
+                    Token::Double(double) => Ok(Token::Boolean(*num < *double)),
+                    _ => Err(ParseError::NotOrd {
+                        type1: String::from("Double"),
+                        type2: Types::from(num2).to_string(),
+                    }),
+                },
+
+                _ => todo!("Cmp"),
+            },
+
+            Self::LowerOrEqual => match (left, right.clone()) {
+                (Token::Int32(num), num2) => match num2 {
+                    Token::Int32(int32) => Ok(Token::Boolean(*num > *int32)),
+                    Token::Int64(int64) => Ok(Token::Boolean(*num > *int64 as i32)),
+                    Token::HPInt(hpint) => Ok(Token::Boolean(*num > *hpint as i32)),
+                    Token::Float(float) => Ok(Token::Boolean(*num > *float as i32)),
+                    Token::Double(double) => Ok(Token::Boolean(*num > *double as i32)),
+                    _ => Err(ParseError::NotOrd {
+                        type1: String::from("Int32"),
+                        type2: Types::from(num2).to_string(),
+                    }),
+                },
+
+                (Token::Int64(num), num2) => match num2 {
+                    Token::Int32(int32) => Ok(Token::Boolean(*num > *int32 as i64)),
+                    Token::Int64(int64) => Ok(Token::Boolean(*num > *int64)),
+                    Token::HPInt(hpint) => Ok(Token::Boolean(*num > *hpint as i64)),
+                    Token::Float(float) => Ok(Token::Boolean(*num > *float as i64)),
+                    Token::Double(double) => Ok(Token::Boolean(*num > *double as i64)),
+                    _ => Err(ParseError::NotOrd {
+                        type1: String::from("Int64"),
+                        type2: Types::from(num2).to_string(),
+                    }),
+                },
+
+                (Token::HPInt(num), num2) => match num2 {
+                    Token::Int32(int32) => Ok(Token::Boolean(*num > *int32 as i128)),
+                    Token::Int64(int64) => Ok(Token::Boolean(*num > *int64 as i128)),
+                    Token::HPInt(hpint) => Ok(Token::Boolean(*num > *hpint)),
+                    Token::Float(float) => Ok(Token::Boolean(*num > *float as i128)),
+                    Token::Double(double) => Ok(Token::Boolean(*num > *double as i128)),
+                    _ => Err(ParseError::NotOrd {
+                        type1: String::from("HPInt"),
+                        type2: Types::from(num2).to_string(),
+                    }),
+                },
+
+                (Token::Float(num), num2) => match num2 {
+                    Token::Int32(int32) => Ok(Token::Boolean(*num > *int32 as f32)),
+                    Token::Int64(int64) => Ok(Token::Boolean(*num > *int64 as f32)),
+                    Token::HPInt(hpint) => Ok(Token::Boolean(*num > *hpint as f32)),
+                    Token::Float(float) => Ok(Token::Boolean(*num > *float)),
+                    Token::Double(double) => Ok(Token::Boolean(*num > *double as f32)),
+                    _ => Err(ParseError::NotOrd {
+                        type1: String::from("Float"),
+                        type2: Types::from(num2).to_string(),
+                    }),
+                },
+
+                (Token::Double(num), num2) => match num2 {
+                    Token::Int32(int32) => Ok(Token::Boolean(*num > *int32 as f64)),
+                    Token::Int64(int64) => Ok(Token::Boolean(*num > *int64 as f64)),
+                    Token::HPInt(hpint) => Ok(Token::Boolean(*num > *hpint as f64)),
+                    Token::Float(float) => Ok(Token::Boolean(*num > *float as f64)),
+                    Token::Double(double) => Ok(Token::Boolean(*num > *double)),
+                    _ => Err(ParseError::NotOrd {
+                        type1: String::from("Double"),
+                        type2: Types::from(num2).to_string(),
+                    }),
+                },
+
+                _ => todo!("Cmp"),
+            },
+
+            Self::Equal => Ok(Token::Boolean(left == right)),
+            Self::StrictEqual => Ok(Token::Boolean(
+                left == right && Types::from(left) == Types::from(right),
+            )),
+
             _ => todo!("Hola mundo"),
         }
     }

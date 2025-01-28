@@ -201,6 +201,12 @@ impl Parser {
                             | Operator::Mod
                             | Operator::DivInt
                             | Operator::Pow
+                            | Operator::Greater
+                            | Operator::GreaterOrEqual
+                            | Operator::Lower
+                            | Operator::LowerOrEqual
+                            | Operator::Equal
+                            | Operator::StrictEqual
                     ) =>
                 {
                     let operator = op.clone();

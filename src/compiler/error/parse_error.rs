@@ -17,6 +17,9 @@ pub enum ParseError {
     #[error("Unexpected token at position {position}: {token:?}")]
     UnexpectedToken { position: usize, token: Token },
 
+    #[error("You can't compare a '{type1}' with a '{type2}'")]
+    NotOrd { type1: String, type2: String },
+
     #[error("Unexpected token at the EOF")]
     UndefinedEOF,
 

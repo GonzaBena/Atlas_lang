@@ -12,7 +12,7 @@ use crate::{
 };
 
 /// Represent each possible token which you can use.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub enum Token {
     // Basic
@@ -47,6 +47,108 @@ pub enum Token {
     NewLine,          // \n
     EOF,              // EOF
     Void,             // void
+}
+
+impl PartialEq for Token {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Token::Identifier(val1), Token::Identifier(val2)) => val1 == val2,
+
+            (Token::Keyword(val1), Token::Keyword(val2)) => val1 == val2,
+
+            (Token::Operation(val1), Token::Operation(val2)) => val1 == val2,
+
+            (Token::Operator(val1), Token::Operator(val2)) => val1 == val2,
+
+            (Token::Type(val1), Token::Type(val2)) => val1 == val2,
+
+            (Token::Int32(val1), Token::Int32(val2)) => **val1 as i32 == **val2,
+            (Token::Int32(val1), Token::Int64(val2)) => **val1 as i64 == **val2,
+            (Token::Int32(val1), Token::HPInt(val2)) => **val1 as i128 == **val2,
+            (Token::Int32(val1), Token::Float(val2)) => **val1 as f32 == **val2,
+            (Token::Int32(val1), Token::Double(val2)) => **val1 == **val2 as i32,
+            (Token::Int32(val1), Token::String(val2)) => val1.to_string() == *val2,
+            (Token::Int32(val1), Token::Str(val2)) => val1.to_string() == val2.to_string(),
+            (Token::Int32(val1), Token::Boolean(val2)) => {
+                (**val1 > 0 && *val2) || (**val1 <= 0 && !*val2)
+            }
+
+            (Token::Int64(val1), Token::Int32(val2)) => **val1 as i32 == **val2,
+            (Token::Int64(val1), Token::Int64(val2)) => **val1 as i64 == **val2,
+            (Token::Int64(val1), Token::HPInt(val2)) => **val1 as i128 == **val2,
+            (Token::Int64(val1), Token::Float(val2)) => **val1 as f32 == **val2,
+            (Token::Int64(val1), Token::Double(val2)) => **val1 == **val2 as i64,
+            (Token::Int64(val1), Token::String(val2)) => val1.to_string() == *val2,
+            (Token::Int64(val1), Token::Str(val2)) => val1.to_string() == val2.to_string(),
+            (Token::Int64(val1), Token::Boolean(val2)) => {
+                (**val1 > 0 && *val2) || (**val1 <= 0 && !*val2)
+            }
+
+            (Token::HPInt(val1), Token::Int32(val2)) => **val1 as i32 == **val2,
+            (Token::HPInt(val1), Token::Int64(val2)) => **val1 as i64 == **val2,
+            (Token::HPInt(val1), Token::HPInt(val2)) => **val1 as i128 == **val2,
+            (Token::HPInt(val1), Token::Float(val2)) => **val1 as f32 == **val2,
+            (Token::HPInt(val1), Token::Double(val2)) => **val1 == **val2 as i128,
+            (Token::HPInt(val1), Token::String(val2)) => val1.to_string() == *val2,
+            (Token::HPInt(val1), Token::Str(val2)) => val1.to_string() == val2.to_string(),
+            (Token::HPInt(val1), Token::Boolean(val2)) => {
+                (**val1 > 0 && *val2) || (**val1 <= 0 && !*val2)
+            }
+
+            (Token::Float(val1), Token::Int32(val2)) => **val1 as i32 == **val2,
+            (Token::Float(val1), Token::Int64(val2)) => **val1 as i64 == **val2,
+            (Token::Float(val1), Token::HPInt(val2)) => **val1 as i128 == **val2,
+            (Token::Float(val1), Token::Float(val2)) => **val1 as f32 == **val2,
+            (Token::Float(val1), Token::Double(val2)) => **val1 == **val2 as f32,
+            (Token::Float(val1), Token::String(val2)) => val1.to_string() == *val2,
+            (Token::Float(val1), Token::Str(val2)) => val1.to_string() == val2.to_string(),
+            (Token::Float(val1), Token::Boolean(val2)) => {
+                (**val1 > 0.0 && *val2) || (**val1 <= 0.0 && !*val2)
+            }
+
+            (Token::Double(val1), Token::Int32(val2)) => **val1 as i32 == **val2,
+            (Token::Double(val1), Token::Int64(val2)) => **val1 as i64 == **val2,
+            (Token::Double(val1), Token::HPInt(val2)) => **val1 as i128 == **val2,
+            (Token::Double(val1), Token::Float(val2)) => **val1 as f32 == **val2,
+            (Token::Double(val1), Token::Double(val2)) => val1 == val2,
+            (Token::Double(val1), Token::String(val2)) => val1.to_string() == *val2,
+            (Token::Double(val1), Token::Str(val2)) => val1.to_string() == val2.to_string(),
+            (Token::Double(val1), Token::Boolean(val2)) => {
+                (**val1 > 0.0 && *val2) || (**val1 <= 0.0 && !*val2)
+            }
+
+            (Token::String(val1), Token::String(val2)) => val1 == val2,
+            (Token::String(val1), Token::Str(val2)) => *val1 == val2.to_string(),
+
+            (Token::Str(val1), Token::String(val2)) => val1.to_string() == *val2,
+            (Token::Str(val1), Token::Str(val2)) => val1 == val2,
+
+            (Token::Boolean(val1), Token::Boolean(val2)) => val1 == val2,
+
+            (Token::List(val1), Token::List(val2)) => val1 == val2,
+
+            (Token::StartParenthesis, Token::StartParenthesis) => true,
+
+            (Token::EndParenthesis, Token::EndParenthesis) => true,
+
+            (Token::StartBracket, Token::StartBracket) => true,
+
+            (Token::EndBracket, Token::EndBracket) => true,
+
+            (Token::StartBrace, Token::StartBrace) => true,
+
+            (Token::EndBrace, Token::EndBrace) => true,
+
+            (Token::Separator(val1), Token::Separator(val2)) => val1 == val2,
+
+            (Token::NewLine, Token::NewLine) => true,
+
+            (Token::EOF, Token::EOF) => true,
+
+            (Token::Void, Token::Void) => true,
+            _ => false,
+        }
+    }
 }
 
 impl Display for Token {
@@ -138,6 +240,14 @@ impl Token {
         }
     }
 
+    pub fn is_numeric(&self) -> bool {
+        match self {
+            Self::Int32(_) | Self::Int64(_) | Self::HPInt(_) | Self::Float(_) | Self::Double(_) => {
+                true
+            }
+            _ => false,
+        }
+    }
     pub fn to(&self, new_type: Types) -> Result<Token, ParseError> {
         match (self, &new_type) {
             (Token::Int32(int32), Types::Int32) => Ok(Token::Int32(*int32)),

@@ -55,6 +55,7 @@ impl<'a> Lexer<'a> {
                         Err(err) => panic(&format!("{:?}", err)),
                     }
                 }
+
                 '"' => {
                     self.content.next();
                     let id = self.cut_string();
@@ -85,7 +86,18 @@ impl<'a> Lexer<'a> {
                 // Operators
                 '=' => {
                     self.content.next();
-                    result.push(Token::Operator(Operator::Assign));
+
+                    if let Some('=') = self.content.peek() {
+                        self.content.next();
+                        if let Some('=') = self.content.peek() {
+                            self.content.next();
+                            result.push(Token::Operator(Operator::StrictEqual));
+                        } else {
+                            result.push(Token::Operator(Operator::Equal));
+                        }
+                    } else {
+                        result.push(Token::Operator(Operator::Assign));
+                    }
                 }
 
                 '+' => {
@@ -156,6 +168,28 @@ impl<'a> Lexer<'a> {
                         result.push(Token::Operator(Operator::ModAssign));
                     } else {
                         result.push(Token::Operator(Operator::Mod));
+                    }
+                }
+
+                '>' => {
+                    self.content.next();
+
+                    if let Some('=') = self.content.peek() {
+                        self.content.next();
+                        result.push(Token::Operator(Operator::GreaterOrEqual));
+                    } else {
+                        result.push(Token::Operator(Operator::Greater));
+                    }
+                }
+
+                '<' => {
+                    self.content.next();
+
+                    if let Some('=') = self.content.peek() {
+                        self.content.next();
+                        result.push(Token::Operator(Operator::LowerOrEqual));
+                    } else {
+                        result.push(Token::Operator(Operator::Lower));
                     }
                 }
 
