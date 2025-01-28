@@ -681,6 +681,15 @@ impl Operator {
                     }),
                 },
 
+                (Token::String(str1), Token::String(str2)) => Ok(Token::Boolean(str1 > str2)),
+                (Token::Str(str1), Token::Str(str2)) => Ok(Token::Boolean(str1 > str2)),
+                (Token::String(str1), Token::Str(str2)) => {
+                    Ok(Token::Boolean(str1.to_string() > str2.to_string()))
+                }
+                (Token::Str(str1), Token::String(str2)) => {
+                    Ok(Token::Boolean(str1.to_string() > str2.to_string()))
+                }
+
                 _ => todo!("Cmp"),
             },
 
@@ -744,6 +753,15 @@ impl Operator {
                         type2: Types::from(num2).to_string(),
                     }),
                 },
+
+                (Token::String(str1), Token::String(str2)) => Ok(Token::Boolean(str1 >= str2)),
+                (Token::Str(str1), Token::Str(str2)) => Ok(Token::Boolean(str1 >= str2)),
+                (Token::String(str1), Token::Str(str2)) => {
+                    Ok(Token::Boolean(str1.to_string() >= str2.to_string()))
+                }
+                (Token::Str(str1), Token::String(str2)) => {
+                    Ok(Token::Boolean(str1.to_string() >= str2.to_string()))
+                }
 
                 _ => todo!("Cmp"),
             },
@@ -809,6 +827,15 @@ impl Operator {
                     }),
                 },
 
+                (Token::String(str1), Token::String(str2)) => Ok(Token::Boolean(str1 < str2)),
+                (Token::Str(str1), Token::Str(str2)) => Ok(Token::Boolean(str1 < str2)),
+                (Token::String(str1), Token::Str(str2)) => {
+                    Ok(Token::Boolean(str1.to_string() < str2.to_string()))
+                }
+                (Token::Str(str1), Token::String(str2)) => {
+                    Ok(Token::Boolean(str1.to_string() < str2.to_string()))
+                }
+
                 _ => todo!("Cmp"),
             },
 
@@ -872,6 +899,15 @@ impl Operator {
                         type2: Types::from(num2).to_string(),
                     }),
                 },
+
+                (Token::String(str1), Token::String(str2)) => Ok(Token::Boolean(str1 <= str2)),
+                (Token::Str(str1), Token::Str(str2)) => Ok(Token::Boolean(str1 <= str2)),
+                (Token::String(str1), Token::Str(str2)) => {
+                    Ok(Token::Boolean(str1.to_string() <= str2.to_string()))
+                }
+                (Token::Str(str1), Token::String(str2)) => {
+                    Ok(Token::Boolean(str1.to_string() <= str2.to_string()))
+                }
 
                 _ => todo!("Cmp"),
             },
